@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username'];
 $messages = json_decode(file_get_contents('messages.json'), true);
 
-// Get the list of users the current user has chatted with
+// Get users the current user has chatted with
 $chattedUsers = [];
 foreach ($messages as $msg) {
     if ($msg['from'] === $username && !in_array($msg['to'], $chattedUsers)) {
@@ -18,10 +18,6 @@ foreach ($messages as $msg) {
         $chattedUsers[] = $msg['from'];
     }
 }
-
-// Check if a user was selected to chat with
-$currentChatUser = $_GET['user'] ?? null;
-
 ?>
 
 <!DOCTYPE html>
@@ -44,10 +40,8 @@ $currentChatUser = $_GET['user'] ?? null;
                 <p>No chats yet! Start a conversation.</p>
             <?php else: ?>
                 <?php foreach ($chattedUsers as $user): ?>
-                    <div class="user <?= $user === $currentChatUser ? 'active' : '' ?>">
-                        <a href="chat.php?user=<?= urlencode($user) ?>">
-                            <?= htmlspecialchars($user) ?>
-                        </a>
+                    <div class="user" onclick="selectUser('<?= urlencode($user) ?>')">
+                        <strong><?= htmlspecialchars($user) ?></strong>
 
                         <!-- New message notification -->
                         <?php
@@ -59,7 +53,7 @@ $currentChatUser = $_GET['user'] ?? null;
                             }
                         }
                         if ($hasNewMessage): ?>
-                            <span class="new-message-indicator"></span>
+                            <span class="new-message-indicator">🔴</span>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
@@ -69,34 +63,50 @@ $currentChatUser = $_GET['user'] ?? null;
 
     <!-- Chat Window -->
     <div class="chat-window">
-        <?php if ($currentChatUser): ?>
-            <h3>Chat with <?= htmlspecialchars($currentChatUser) ?></h3>
-            <div class="chat-body" id="chatBody">
-                <?php foreach ($messages as $msg): ?>
-                    <?php if (($msg['from'] === $username && $msg['to'] === $currentChatUser) ||
-                        ($msg['from'] === $currentChatUser && $msg['to'] === $username)): ?>
-                        <div class="message <?= $msg['from'] === $username ? 'outgoing' : 'incoming' ?>">
-                            <?= htmlspecialchars($msg['text']) ?>
-                        </div>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </div>
-
-            <form method="post" action="send_message.php">
-                <input type="hidden" name="to" value="<?= htmlspecialchars($currentChatUser) ?>">
-                <input type="text" name="message" placeholder="Type a message...">
-                <button type="submit">➤</button>
-            </form>
-        <?php else: ?>
-            <!-- Empty chat placeholder when no user is selected -->
+        <div id="chat-content">
+            <!-- Initially Empty -->
             <div class="no-chat-selected">
                 <h2>👋 Start a conversation!</h2>
                 <p>Select a user from the inbox to chat.</p>
             </div>
-        <?php endif; ?>
+        </div>
     </div>
 
 </div>
+
+<script>
+    let currentChatUser = null;
+
+    function selectUser(user) {
+        currentChatUser = user;
+        loadChat(user);
+    }
+
+    function loadChat(user) {
+        fetch(`load_chat.php?user=${user}`)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('chat-content').innerHTML = data;
+                document.querySelectorAll('.new-message-indicator').forEach(indicator => indicator.remove());
+            });
+    }
+
+    function sendMessage() {
+        const message = document.getElementById("message").value;
+        if (!message.trim()) return;
+
+        fetch("send_message.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ to: currentChatUser, message })
+        }).then(() => loadChat(currentChatUser));
+    }
+
+    // Real-time polling (1-second refresh)
+    setInterval(() => {
+        if (currentChatUser) loadChat(currentChatUser);
+    }, 1000);
+</script>
 
 </body>
 </html>
