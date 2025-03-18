@@ -5,17 +5,21 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $to = $_POST['to'];
-    $message = trim($_POST['message']);
-    $from = $_SESSION['username'];
+$to = $_POST['to'];
+$message = trim($_POST['message']);
+$from = $_SESSION['username'];
 
+if ($message !== "") {
     $messages = json_decode(file_get_contents('messages.json'), true);
-    $chat_key = $from . "_" . $to;
+    $messages[] = [
+        "from" => $from,
+        "to" => $to,
+        "text" => $message,
+        "read" => false
+    ];
 
-    $messages[$chat_key][] = ['from' => $from, 'text' => $message];
     file_put_contents('messages.json', json_encode($messages));
-
-    header("Location: chat.php?user=" . urlencode($to));
-    exit();
 }
+
+header("Location: chat.php?user=" . urlencode($to));
+exit();
