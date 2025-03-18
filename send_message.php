@@ -5,21 +5,30 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-$to = $_POST['to'];
-$message = trim($_POST['message']);
-$from = $_SESSION['username'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $from = $_SESSION['username'];
+    $to = $_POST['to'] ?? null;
+    $message = trim($_POST['message']);
 
-if ($message !== "") {
-    $messages = json_decode(file_get_contents('messages.json'), true);
-    $messages[] = [
-        "from" => $from,
-        "to" => $to,
-        "text" => $message,
-        "read" => false
-    ];
+    if ($to && !empty($message)) {
+        $messages = json_decode(file_get_contents('messages.json'), true);
 
-    file_put_contents('messages.json', json_encode($messages));
+        $messages[] = [
+            'from' => $from,
+            'to' => $to,
+            'text' => $message,
+            'read' => false,
+            'timestamp' => time()
+        ];
+
+        file_put_contents('messages.json', json_encode($messages, JSON_PRETTY_PRINT));
+
+        // ✅ Redirect back to inbox with the selected user opened
+        header("Location: inbox.php?user=" . urlencode($to));
+        exit();
+    }
 }
 
-header("Location: chat.php?user=" . urlencode($to));
+// 🚨 If something goes wrong (empty message or no user selected)
+header("Location: inbox.php");
 exit();
