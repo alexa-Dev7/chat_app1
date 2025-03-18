@@ -172,3 +172,24 @@ h2 {
 .user.active {
     background: #4da8da;
 }
+/* Empty Chat Window Styling */
+.no-chat-selected {
+    text-align: center;
+    color: #888;
+    margin-top: 100px;
+}
+
+/* New Message Indicator */
+.new-message-indicator {
+    width: 10px;
+    height: 10px;
+    background: red;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+/* Active Chat Highlight */
+.user.active {
+    background: #4da8da;
+}
