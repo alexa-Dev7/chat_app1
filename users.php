@@ -23,7 +23,7 @@ $users = json_decode(file_get_contents('users.json'), true);
         <?php
         foreach ($users as $user => $data) {
             if ($user != $_SESSION['username']) {
-                echo "<li>$user <a href='chat.php?user=" . urlencode($user) . "'>Message</a></li>";
+                echo "<li>$user <a href='inbox.php?user=" . urlencode($user) . "'>Message</a></li>";
             }
         }
         ?>
