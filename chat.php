@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username'];
 $messages = json_decode(file_get_contents('messages.json'), true);
 
-// Get list of users the current user has chatted with
+// Get the list of users the current user has chatted with
 $chattedUsers = [];
 foreach ($messages as $msg) {
     if ($msg['from'] === $username && !in_array($msg['to'], $chattedUsers)) {
@@ -19,8 +19,8 @@ foreach ($messages as $msg) {
     }
 }
 
-// Load conversation with selected user
-$currentChatUser = $_GET['user'] ?? $chattedUsers[0] ?? null;
+// Check if a user was selected to chat with
+$currentChatUser = $_GET['user'] ?? null;
 
 ?>
 
@@ -40,49 +40,62 @@ $currentChatUser = $_GET['user'] ?? $chattedUsers[0] ?? null;
 
         <!-- User List (Inbox) -->
         <div class="user-list">
-            <?php foreach ($chattedUsers as $user): ?>
-                <div class="user <?= $user === $currentChatUser ? 'active' : '' ?>">
-                    <a href="chat.php?user=<?= urlencode($user) ?>">
-                        <?= htmlspecialchars($user) ?>
-                    </a>
+            <?php if (empty($chattedUsers)): ?>
+                <p>No chats yet! Start a conversation.</p>
+            <?php else: ?>
+                <?php foreach ($chattedUsers as $user): ?>
+                    <div class="user <?= $user === $currentChatUser ? 'active' : '' ?>">
+                        <a href="chat.php?user=<?= urlencode($user) ?>">
+                            <?= htmlspecialchars($user) ?>
+                        </a>
 
-                    <!-- New message notification -->
-                    <?php
-                    $hasNewMessage = false;
-                    foreach ($messages as $msg) {
-                        if ($msg['to'] === $username && $msg['from'] === $user && !$msg['read']) {
-                            $hasNewMessage = true;
-                            break;
+                        <!-- New message notification -->
+                        <?php
+                        $hasNewMessage = false;
+                        foreach ($messages as $msg) {
+                            if ($msg['to'] === $username && $msg['from'] === $user && !$msg['read']) {
+                                $hasNewMessage = true;
+                                break;
+                            }
                         }
-                    }
-                    if ($hasNewMessage): ?>
-                        <span class="new-message-indicator"></span>
-                    <?php endif; ?>
-                </div>
-            <?php endforeach; ?>
+                        if ($hasNewMessage): ?>
+                            <span class="new-message-indicator"></span>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 
     <!-- Chat Window -->
     <div class="chat-window">
-        <h3>Chat with <?= htmlspecialchars($currentChatUser) ?></h3>
-        <div class="chat-body" id="chatBody">
-            <?php foreach ($messages as $msg): ?>
-                <?php if (($msg['from'] === $username && $msg['to'] === $currentChatUser) || 
-                          ($msg['from'] === $currentChatUser && $msg['to'] === $username)): ?>
-                    <div class="message <?= $msg['from'] === $username ? 'outgoing' : 'incoming' ?>">
-                        <?= htmlspecialchars($msg['text']) ?>
-                    </div>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        </div>
+        <?php if ($currentChatUser): ?>
+            <h3>Chat with <?= htmlspecialchars($currentChatUser) ?></h3>
+            <div class="chat-body" id="chatBody">
+                <?php foreach ($messages as $msg): ?>
+                    <?php if (($msg['from'] === $username && $msg['to'] === $currentChatUser) ||
+                        ($msg['from'] === $currentChatUser && $msg['to'] === $username)): ?>
+                        <div class="message <?= $msg['from'] === $username ? 'outgoing' : 'incoming' ?>">
+                            <?= htmlspecialchars($msg['text']) ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
 
-        <form method="post" action="send_message.php">
-            <input type="hidden" name="to" value="<?= htmlspecialchars($currentChatUser) ?>">
-            <input type="text" name="message" placeholder="Type a message...">
-            <button type="submit">➤</button>
-        </form>
+            <form method="post" action="send_message.php">
+                <input type="hidden" name="to" value="<?= htmlspecialchars($currentChatUser) ?>">
+                <input type="text" name="message" placeholder="Type a message...">
+                <button type="submit">➤</button>
+            </form>
+        <?php else: ?>
+            <!-- Empty chat placeholder when no user is selected -->
+            <div class="no-chat-selected">
+                <h2>👋 Start a conversation!</h2>
+                <p>Select a user from the inbox to chat.</p>
+            </div>
+        <?php endif; ?>
     </div>
+
 </div>
 
 </body>
