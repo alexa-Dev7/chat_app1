@@ -5,26 +5,30 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-$username = $_SESSION['username'];
-$users = json_decode(file_get_contents("users.json"), true);
-$messages = json_decode(file_get_contents("messages.json"), true);
+$users = json_decode(file_get_contents('users.json'), true);
+?>
 
-echo "<h2>Welcome, $username!</h2>";
-
-foreach ($users as $user) {
-    if ($user['username'] !== $username) {
-        $unread = false;
-
-        foreach ($messages as $msg) {
-            if ($msg['receiver'] == $username && $msg['sender'] == $user['username'] && $msg['status'] === "unread") {
-                $unread = true;
-                break;
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="assets/reset.css">
+    <link rel="stylesheet" href="assets/styles.css">
+    <title>Users - Chat App</title>
+</head>
+<body>
+<div class="container">
+    <h2>Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></h2>
+    <h3>Users List</h3>
+    <ul>
+        <?php
+        foreach ($users as $user => $data) {
+            if ($user != $_SESSION['username']) {
+                echo "<li>$user <a href='chat.php?user=" . urlencode($user) . "'>Message</a></li>";
             }
         }
-
-        $notification = $unread ? "🔴" : "";
-        echo "<div><strong>{$user['username']}</strong> $notification <a href='chat.php?user={$user['username']}'>Message</a></div>";
-    }
-}
-
-echo "<br><a href='logout.php'>Logout</a>";
+        ?>
+    </ul>
+    <a href="logout.php">Logout</a>
+</div>
+</body>
+</html>
