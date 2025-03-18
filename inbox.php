@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username'];
 $messages = json_decode(file_get_contents('messages.json'), true);
 
-// Get users the current user has chatted with
+// Get the list of users the current user has chatted with
 $chattedUsers = [];
 foreach ($messages as $msg) {
     if ($msg['from'] === $username && !in_array($msg['to'], $chattedUsers)) {
@@ -18,6 +18,9 @@ foreach ($messages as $msg) {
         $chattedUsers[] = $msg['from'];
     }
 }
+
+// Check if a user is selected for chat
+$currentChatUser = $_GET['user'] ?? null;
 ?>
 
 <!DOCTYPE html>
@@ -40,8 +43,9 @@ foreach ($messages as $msg) {
                 <p>No chats yet! Start a conversation.</p>
             <?php else: ?>
                 <?php foreach ($chattedUsers as $user): ?>
-                    <div class="user" onclick="selectUser('<?= urlencode($user) ?>')">
-                        <strong><?= htmlspecialchars($user) ?></strong>
+                    <div class="user <?= $user === $currentChatUser ? 'active' : '' ?>"
+                         onclick="openChat('<?= urlencode($user) ?>')">
+                        <?= htmlspecialchars($user) ?>
 
                         <!-- New message notification -->
                         <?php
@@ -53,7 +57,7 @@ foreach ($messages as $msg) {
                             }
                         }
                         if ($hasNewMessage): ?>
-                            <span class="new-message-indicator">🔴</span>
+                            <span class="new-message-indicator"></span>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
@@ -63,48 +67,55 @@ foreach ($messages as $msg) {
 
     <!-- Chat Window -->
     <div class="chat-window">
-        <div id="chat-content">
-            <!-- Initially Empty -->
+        <?php if ($currentChatUser): ?>
+            <h3>Chat with <?= htmlspecialchars($currentChatUser) ?></h3>
+            <div class="chat-body" id="chatBody">
+                <?php foreach ($messages as $msg): ?>
+                    <?php if (($msg['from'] === $username && $msg['to'] === $currentChatUser) ||
+                        ($msg['from'] === $currentChatUser && $msg['to'] === $username)): ?>
+                        <div class="message <?= $msg['from'] === $username ? 'outgoing' : 'incoming' ?>">
+                            <?= htmlspecialchars($msg['text']) ?>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+
+            <form method="post" action="send_message.php">
+                <input type="hidden" name="to" value="<?= htmlspecialchars($currentChatUser) ?>">
+                <input type="text" name="message" placeholder="Type a message...">
+                <button type="submit">➤</button>
+            </form>
+        <?php else: ?>
+            <!-- Empty chat placeholder when no user is selected -->
             <div class="no-chat-selected">
                 <h2>👋 Start a conversation!</h2>
                 <p>Select a user from the inbox to chat.</p>
             </div>
-        </div>
+        <?php endif; ?>
     </div>
 
 </div>
 
 <script>
-    let currentChatUser = null;
-
-    function selectUser(user) {
-        currentChatUser = user;
-        loadChat(user);
+    // Open chat without page reload
+    function openChat(user) {
+        window.location.href = 'inbox.php?user=' + user;
     }
 
-    function loadChat(user) {
-        fetch(`load_chat.php?user=${user}`)
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('chat-content').innerHTML = data;
-                document.querySelectorAll('.new-message-indicator').forEach(indicator => indicator.remove());
-            });
-    }
+    // Auto-scroll chat to the latest message
+    const chatBody = document.getElementById('chatBody');
+    if (chatBody) chatBody.scrollTop = chatBody.scrollHeight;
 
-    function sendMessage() {
-        const message = document.getElementById("message").value;
-        if (!message.trim()) return;
-
-        fetch("send_message.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ to: currentChatUser, message })
-        }).then(() => loadChat(currentChatUser));
-    }
-
-    // Real-time polling (1-second refresh)
+    // Short polling every 1 second to fetch new messages
     setInterval(() => {
-        if (currentChatUser) loadChat(currentChatUser);
+        if ('<?= $currentChatUser ?>' !== '') {
+            fetch('load_chat.php?user=<?= urlencode($currentChatUser) ?>')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('chatBody').innerHTML = data;
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                });
+        }
     }, 1000);
 </script>
 
