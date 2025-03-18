@@ -1,44 +1,78 @@
 <?php
 session_start();
-if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
-    header("Location: users.php");
+if (!isset($_SESSION['username'])) {
+    header("Location: index.php");
     exit();
 }
 
-$current_user = $_SESSION['username'];
-$chat_user = htmlspecialchars($_GET['user']);
-$messages = json_decode(file_get_contents('messages.json'), true);
+$user = $_GET['user'] ?? 'Unknown User';
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <link rel="stylesheet" href="assets/reset.css">
     <link rel="stylesheet" href="assets/styles.css">
-    <title>Chat with <?php echo $chat_user; ?></title>
+    <title>Chat with <?= htmlspecialchars($user) ?></title>
 </head>
-<body>
-<div class="container">
-    <h2>Chat with <?php echo $chat_user; ?></h2>
 
-    <div class="chatbox">
-        <?php
-        $chat_key = $current_user . "_" . $chat_user;
-        if (isset($messages[$chat_key])) {
-            foreach ($messages[$chat_key] as $msg) {
-                echo "<p><strong>{$msg['from']}:</strong> {$msg['text']}</p>";
-            }
-        }
-        ?>
+<body>
+<div class="chat-container">
+
+    <!-- Left Sidebar (User List) -->
+    <div class="sidebar">
+        <h2><?= $_SESSION['username'] ?></h2>
+        <button class="new-convo">+ New Conversation</button>
+        <input type="text" placeholder="Search" class="search-bar">
+        <div class="user-list">
+            <div class="user active">
+                <img src="assets/avatar1.png" alt="User">
+                <span>Jason Momoa</span>
+                <small>Typing...</small>
+            </div>
+            <div class="user">
+                <img src="assets/avatar2.png" alt="User">
+                <span>Albert</span>
+                <small>12 min ago</small>
+            </div>
+        </div>
     </div>
 
-    <form action="send_message.php" method="post">
-        <input type="hidden" name="to" value="<?php echo $chat_user; ?>">
-        <input type="text" name="message" placeholder="Type a message..." required>
-        <button type="submit">Send</button>
-    </form>
+    <!-- Chat Section -->
+    <div class="chat-window">
+        <div class="chat-header">
+            <h3><?= htmlspecialchars($user) ?></h3>
+            <div class="chat-icons">
+                📞 ⋮
+            </div>
+        </div>
 
-    <a href="users.php">Back to Users</a>
+        <div class="chat-body" id="chatBody">
+            <div class="message outgoing">Did you mail me?</div>
+            <div class="message incoming">Yes, I did...</div>
+            <div class="message outgoing">Okay, let me check</div>
+            <div class="message incoming">Please revert back ASAP</div>
+        </div>
+
+        <div class="chat-footer">
+            <input type="text" id="messageInput" placeholder="Type a message...">
+            <button onclick="sendMessage()">➤</button>
+        </div>
+    </div>
 </div>
+
+<script>
+    function sendMessage() {
+        const input = document.getElementById("messageInput");
+        const message = input.value.trim();
+        if (message !== "") {
+            const chatBody = document.getElementById("chatBody");
+            chatBody.innerHTML += `<div class='message outgoing'>${message}</div>`;
+            input.value = "";
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+    }
+</script>
+
 </body>
 </html>
