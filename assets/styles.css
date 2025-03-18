@@ -118,7 +118,7 @@ h2 {
 
 /* Outgoing Messages (Blue) */
 .message.outgoing {
-    background: #4da8da;
+    background: #00a6ff;
     color: #fff;
     align-self: flex-end;
     text-align: right;
@@ -127,7 +127,7 @@ h2 {
 
 /* Incoming Messages (Purple) */
 .message.incoming {
-    background: #b76e79;
+    background: #ffffffc5;
     color: #fff;
     text-align: left;
 }
