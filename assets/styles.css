@@ -158,3 +158,17 @@ h2 {
     border-radius: 20px;
     cursor: pointer;
 }
+/* New Message Indicator */
+.new-message-indicator {
+    width: 10px;
+    height: 10px;
+    background: red;
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+/* Active Chat Highlight */
+.user.active {
+    background: #4da8da;
+}
