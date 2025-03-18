@@ -6,97 +6,93 @@ if (!isset($_SESSION['username'])) {
 }
 
 $username = $_SESSION['username'];
-$messages = json_decode(file_get_contents('messages.json'), true);
-
-// Get the list of users the current user has chatted with
-$chattedUsers = [];
-foreach ($messages as $msg) {
-    if ($msg['from'] === $username && !in_array($msg['to'], $chattedUsers)) {
-        $chattedUsers[] = $msg['to'];
-    }
-    if ($msg['to'] === $username && !in_array($msg['from'], $chattedUsers)) {
-        $chattedUsers[] = $msg['from'];
-    }
-}
-
-// Check if a user was selected to chat with
-$currentChatUser = $_GET['user'] ?? null;
+$receiver = $_GET['user'] ?? '';
+$messages = json_decode(file_get_contents("messages.json"), true);
 
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <link rel="stylesheet" href="assets/styles.css">
-    <title>Inbox</title>
 </head>
 <body>
+    <div class="chat-container">
 
-<div class="chat-container">
+        <!-- Left Side Inbox -->
+        <div class="inbox">
+            <h2>Your Chats</h2>
+            <?php
+            foreach ($messages as $chat) {
+                if ($chat['sender'] == $username || $chat['receiver'] == $username) {
+                    $friend = $chat['sender'] === $username ? $chat['receiver'] : $chat['sender'];
+                    $unread = $chat['status'] === "unread" && $chat['receiver'] == $username ? "🔴" : "";
+                    echo "<div class='user'><a href='chat.php?user=$friend'>$friend $unread</a></div>";
+                }
+            }
+            ?>
+        </div>
 
-    <!-- Inbox Sidebar -->
-    <div class="sidebar">
-        <h2><?= htmlspecialchars($username) ?></h2>
+        <!-- Right Side Chatbox -->
+        <div class="chatbox">
+            <?php if ($receiver): ?>
+                <h2>Chat with <?php echo $receiver; ?></h2>
+                <div class="messages">
+                    <?php
+                    foreach ($messages as &$chat) {
+                        if (($chat['sender'] == $username && $chat['receiver'] == $receiver) ||
+                            ($chat['sender'] == $receiver && $chat['receiver'] == $username)) {
 
-        <!-- User List (Inbox) -->
-        <div class="user-list">
-            <?php if (empty($chattedUsers)): ?>
-                <p>No chats yet! Start a conversation.</p>
-            <?php else: ?>
-                <?php foreach ($chattedUsers as $user): ?>
-                    <div class="user <?= $user === $currentChatUser ? 'active' : '' ?>">
-                        <a href="chat.php?user=<?= urlencode($user) ?>">
-                            <?= htmlspecialchars($user) ?>
-                        </a>
+                            $align = $chat['sender'] == $username ? "right" : "left";
+                            $status = $chat['status'] == "read" && $chat['sender'] == $username ? "✔✔" : "✔";
+                            echo "<div class='message $align'>{$chat['message']} <span class='status'>$status</span></div>";
 
-                        <!-- New message notification -->
-                        <?php
-                        $hasNewMessage = false;
-                        foreach ($messages as $msg) {
-                            if ($msg['to'] === $username && $msg['from'] === $user && !$msg['read']) {
-                                $hasNewMessage = true;
-                                break;
+                            if ($chat['receiver'] == $username) {
+                                $chat['status'] = 'read';
                             }
                         }
-                        if ($hasNewMessage): ?>
-                            <span class="new-message-indicator"></span>
-                        <?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
+                    }
+                    file_put_contents("messages.json", json_encode($messages));
+                    ?>
+                </div>
+
+                <div id="typing-indicator"></div>
+                <input type="text" id="message" placeholder="Type a message..." oninput="updateTyping(true)">
+                <button onclick="sendMessage()">Send</button>
+
+                <script>
+                    const receiver = "<?php echo $receiver; ?>";
+
+                    function updateTyping(typing) {
+                        fetch("update_typing.php", {
+                            method: "POST",
+                            body: JSON.stringify({ receiver, typing })
+                        });
+                    }
+
+                    function sendMessage() {
+                        const message = document.getElementById("message").value;
+                        fetch("send_message.php", {
+                            method: "POST",
+                            body: JSON.stringify({ receiver, message })
+                        }).then(() => window.location.reload());
+                    }
+
+                    setInterval(() => {
+                        fetch("check_status.php", {
+                            method: "POST",
+                            body: JSON.stringify({ receiver })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById("typing-indicator").innerText = data.typing ? "Typing..." : "";
+                        });
+                    }, 1000);
+                </script>
+            <?php else: ?>
+                <h2>Select a user to start chatting!</h2>
             <?php endif; ?>
         </div>
     </div>
-
-    <!-- Chat Window -->
-    <div class="chat-window">
-        <?php if ($currentChatUser): ?>
-            <h3>Chat with <?= htmlspecialchars($currentChatUser) ?></h3>
-            <div class="chat-body" id="chatBody">
-                <?php foreach ($messages as $msg): ?>
-                    <?php if (($msg['from'] === $username && $msg['to'] === $currentChatUser) ||
-                        ($msg['from'] === $currentChatUser && $msg['to'] === $username)): ?>
-                        <div class="message <?= $msg['from'] === $username ? 'outgoing' : 'incoming' ?>">
-                            <?= htmlspecialchars($msg['text']) ?>
-                        </div>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </div>
-
-            <form method="post" action="send_message.php">
-                <input type="hidden" name="to" value="<?= htmlspecialchars($currentChatUser) ?>">
-                <input type="text" name="message" placeholder="Type a message...">
-                <button type="submit">➤</button>
-            </form>
-        <?php else: ?>
-            <!-- Empty chat placeholder when no user is selected -->
-            <div class="no-chat-selected">
-                <h2>👋 Start a conversation!</h2>
-                <p>Select a user from the inbox to chat.</p>
-            </div>
-        <?php endif; ?>
-    </div>
-
-</div>
-
 </body>
 </html>
