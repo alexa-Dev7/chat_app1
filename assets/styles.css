@@ -193,3 +193,157 @@ h2 {
 .user.active {
     background: #4da8da;
 }
+/* Reset basic styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Login Container */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.login-box {
+    background: white;
+    padding: 30px 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* App Logo */
+.app-logo {
+    font-size: 36px;
+    font-weight: bold;
+    color: #1877f2;
+    margin-bottom: 20px;
+}
+
+/* Title */
+h2 {
+    font-size: 26px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Input Field Styling */
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    border-color: #1877f2;
+    outline: none;
+}
+
+/* Button Styling */
+button {
+    width: 100%;
+    padding: 12px;
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #145db1;
+}
+
+/* Link Styling */
+p {
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+p a {
+    color: #1877f2;
+    text-decoration: none;
+}
+
+p a:hover {
+    text-decoration: underline;
+}
+
+/* Error Message Styling */
+.error {
+    color: red;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+/* Responsive Design for Mobile */
+@media (max-width: 768px) {
+    .login-box {
+        padding: 25px 30px;
+        width: 90%;
+    }
+
+    .app-logo {
+        font-size: 30px;
+    }
+
+    h2 {
+        font-size: 22px;
+    }
+
+    input, button {
+        font-size: 14px;
+    }
+
+    .error {
+        font-size: 12px;
+    }
+
+    p {
+        font-size: 12px;
+    }
+}
+
+/* Desktop View (Facebook-like UI) */
+@media (min-width: 769px) {
+    body {
+        background: #f0f2f5;
+    }
+
+    .login-box {
+        max-width: 400px;
+    }
+
+    h2 {
+        font-size: 26px;
+    }
+
+    .app-logo {
+        font-size: 36px;
+    }
+
+    input, button {
+        font-size: 16px;
+    }
+}
