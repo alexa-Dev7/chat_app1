@@ -7,19 +7,11 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username'];
 $messages = json_decode(file_get_contents('persistent_data/messages.json'), true);
+$users = json_decode(file_get_contents('persistent_data/users.json'), true);
 
-// Track users the current user has chatted with
-$chattedUsers = [];
-foreach ($messages as $msg) {
-    if ($msg['from'] === $username && !in_array($msg['to'], $chattedUsers)) {
-        $chattedUsers[] = $msg['to'];
-    }
-    if ($msg['to'] === $username && !in_array($msg['from'], $chattedUsers)) {
-        $chattedUsers[] = $msg['from'];
-    }
-}
+// Get all users except the logged-in one
+$allUsers = array_filter($users, fn($u) => $u !== $username);
 
-// Track the current chat user
 $currentChatUser = $_GET['user'] ?? null;
 ?>
 
@@ -40,11 +32,11 @@ $currentChatUser = $_GET['user'] ?? null;
 
         <!-- User List (Inbox) -->
         <div class="user-list">
-            <?php if (empty($chattedUsers)): ?>
-                <p>No chats yet! Start a conversation.</p>
+            <?php if (empty($allUsers)): ?>
+                <p>No users available!</p>
             <?php else: ?>
-                <?php foreach ($chattedUsers as $user): ?>
-                    <div class="user <?= $user === $currentChatUser ? 'active' : '' ?>"
+                <?php foreach ($allUsers as $user): ?>
+                    <div class="user <?= $user === $currentChatUser ? 'active' : '' ?>" 
                          onclick="openChat('<?= urlencode($user) ?>')">
                         <?= htmlspecialchars($user) ?>
 
@@ -60,6 +52,7 @@ $currentChatUser = $_GET['user'] ?? null;
                         if ($hasNewMessage): ?>
                             <span class="new-message-indicator">●</span>
                         <?php endif; ?>
+                        <button class="message-btn" onclick="openChat('<?= urlencode($user) ?>')">Message</button>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -90,7 +83,6 @@ $currentChatUser = $_GET['user'] ?? null;
                 <button type="submit">➤</button>
             </form>
         <?php else: ?>
-            <!-- Empty chat placeholder when no user is selected -->
             <div class="no-chat-selected">
                 <h2>👋 Start a conversation!</h2>
                 <p>Select a user from the inbox to chat.</p>
@@ -101,16 +93,13 @@ $currentChatUser = $_GET['user'] ?? null;
 </div>
 
 <script>
-    // Open chat without page reload
     function openChat(user) {
         window.location.href = 'inbox.php?user=' + user;
     }
 
-    // Auto-scroll chat to the latest message
     const chatBody = document.getElementById('chatBody');
     if (chatBody) chatBody.scrollTop = chatBody.scrollHeight;
 
-    // Short polling every 1 second to fetch new messages
     setInterval(() => {
         if ('<?= $currentChatUser ?>' !== '') {
             fetch('load_chat.php?user=<?= urlencode($currentChatUser) ?>')
@@ -122,7 +111,6 @@ $currentChatUser = $_GET['user'] ?? null;
         }
     }, 1000);
 
-    // Typing indicator functionality
     let typingTimer;
     function notifyTyping() {
         clearTimeout(typingTimer);
@@ -133,7 +121,6 @@ $currentChatUser = $_GET['user'] ?? null;
         }, 2000);
     }
 
-    // Poll for typing indicator
     setInterval(() => {
         fetch('typing_status.php?user=<?= urlencode($currentChatUser) ?>')
             .then(response => response.json())
