@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sessions[$username] = session_id();
         file_put_contents('persistent_data/sessions.json', json_encode($sessions));
 
-        header("Location: inbox.php");
+        header("Location: users.php");
         exit();
     } else {
         $error = "Invalid username or password!";
