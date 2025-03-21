@@ -1,15 +1,27 @@
+
 <?php
 session_start();
-if (!isset($_SESSION['username']) || !isset($_GET['user'])) exit();
+if (!isset($_SESSION['username'])) exit();
 
 $username = $_SESSION['username'];
-$chatWith = $_GET['user'];
-$messages = json_decode(file_get_contents('persistent_data/messages.json'), true) ?? [];
+$currentChatUser = $_GET['user'] ?? null;
+$messages = json_decode(file_get_contents('persistent_data/messages.json'), true);
 
-foreach ($messages as $msg) {
-    if (($msg['from'] === $username && $msg['to'] === $chatWith) || 
-        ($msg['from'] === $chatWith && $msg['to'] === $username)) {
-        $class = ($msg['from'] === $username) ? 'outgoing' : 'incoming';
-        echo "<div class='message $class'>" . htmlspecialchars($msg['text']) . "</div>";
+if ($currentChatUser) {
+    foreach ($messages as &$msg) {
+        if ($msg['from'] === $currentChatUser && $msg['to'] === $username) {
+            $msg['read'] = true;  // Mark messages as read
+        }
+    }
+    file_put_contents('messages.json', json_encode($messages));
+
+    foreach ($messages as $msg) {
+        if (($msg['from'] === $username && $msg['to'] === $currentChatUser) ||
+            ($msg['from'] === $currentChatUser && $msg['to'] === $username)) {
+            echo '<div class="message ' . ($msg['from'] === $username ? 'outgoing' : 'incoming') . '">';
+            echo htmlspecialchars($msg['text']);
+            echo '</div>';
+        }
     }
 }
+?>
