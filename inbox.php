@@ -6,9 +6,9 @@ if (!isset($_SESSION['username'])) {
 }
 
 $username = $_SESSION['username'];
-$messages = json_decode(file_get_contents('messages.json'), true);
+$messages = json_decode(file_get_contents('persistent_data/messages.json'), true);
 
-// Get the list of users the current user has chatted with
+// Track users the current user has chatted with
 $chattedUsers = [];
 foreach ($messages as $msg) {
     if ($msg['from'] === $username && !in_array($msg['to'], $chattedUsers)) {
@@ -19,7 +19,7 @@ foreach ($messages as $msg) {
     }
 }
 
-// Check if a user is selected for chat
+// Track the current chat user
 $currentChatUser = $_GET['user'] ?? null;
 ?>
 
@@ -34,9 +34,9 @@ $currentChatUser = $_GET['user'] ?? null;
 
 <div class="chat-container">
 
-    <!-- Inbox Sidebar -->
+    <!-- Sidebar -->
     <div class="sidebar">
-        <h2><?= htmlspecialchars($username) ?></h2>
+        <h2>👤 <?= htmlspecialchars($username) ?></h2>
 
         <!-- User List (Inbox) -->
         <div class="user-list">
@@ -58,7 +58,7 @@ $currentChatUser = $_GET['user'] ?? null;
                             }
                         }
                         if ($hasNewMessage): ?>
-                            <span class="new-message-indicator"></span>
+                            <span class="new-message-indicator">●</span>
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
@@ -81,9 +81,12 @@ $currentChatUser = $_GET['user'] ?? null;
                 <?php endforeach; ?>
             </div>
 
+            <!-- Typing Indicator -->
+            <div id="typingIndicator" style="display: none; font-style: italic; padding: 5px 10px;">🔧 <?= htmlspecialchars($currentChatUser) ?> is typing...</div>
+
             <form method="post" action="send_message.php">
                 <input type="hidden" name="to" value="<?= htmlspecialchars($currentChatUser) ?>">
-                <input type="text" name="message" placeholder="Type a message...">
+                <input type="text" name="message" id="messageInput" placeholder="Type a message..." oninput="notifyTyping()">
                 <button type="submit">➤</button>
             </form>
         <?php else: ?>
@@ -117,6 +120,31 @@ $currentChatUser = $_GET['user'] ?? null;
                     chatBody.scrollTop = chatBody.scrollHeight;
                 });
         }
+    }, 1000);
+
+    // Typing indicator functionality
+    let typingTimer;
+    function notifyTyping() {
+        clearTimeout(typingTimer);
+        fetch('typing_status.php?user=<?= urlencode($currentChatUser) ?>&typing=1');
+
+        typingTimer = setTimeout(() => {
+            fetch('typing_status.php?user=<?= urlencode($currentChatUser) ?>&typing=0');
+        }, 2000);
+    }
+
+    // Poll for typing indicator
+    setInterval(() => {
+        fetch('typing_status.php?user=<?= urlencode($currentChatUser) ?>')
+            .then(response => response.json())
+            .then(data => {
+                const indicator = document.getElementById('typingIndicator');
+                if (data.typing) {
+                    indicator.style.display = 'block';
+                } else {
+                    indicator.style.display = 'none';
+                }
+            });
     }, 1000);
 </script>
 
