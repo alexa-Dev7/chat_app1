@@ -21,36 +21,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 }
-
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="assets/styles.css">
-    <title>Register - Red Pages</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Sender Sign Up</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+    </style>
 </head>
-<body>
-
-<div class="login-container">
-    <div class="login-content">
-        <h1>Sign Up</h1>
-        <p>Create a new account to join Red Pages.</p>
-
+<body class="bg-gray-100">
+  <div class="flex justify-center items-center min-h-screen">
+    <div class="w-full max-w-md">
+      <div class="bg-white p-6 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-bold text-center mb-2">
+          Create a new account
+        </h2>
+        <p class="text-center text-gray-600 mb-4">
+          It's quick and easy.
+        </p>
+        
         <?php if (!empty($error)): ?>
-            <p class="error"><?= htmlspecialchars($error) ?></p>
+          <p class="text-red-500 text-center mb-4"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
-
+        
         <form action="register.php" method="post">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Sign Up</button>
+          <div class="flex space-x-2 mb-4">
+            <input class="w-1/2 p-2 border border-gray-300 rounded" type="text" name="username" placeholder="Username" required/>
+            <input class="w-1/2 p-2 border border-gray-300 rounded" type="password" name="password" placeholder="Password" required/>
+          </div>
+          
+          <div class="mb-4">
+            <input class="w-full p-2 border border-gray-300 rounded" type="email" name="email" placeholder="Email address" required/>
+          </div>
+          
+          <p class="text-xs text-gray-600 mb-4">
+            This is a private messaging programme. Developed by Trishit
+            <a class="text-blue-600" href="#">
+              Learn more.
+            </a>
+          </p>
+          
+          <p class="text-xs text-gray-600 mb-4">
+            By clicking Sign Up, you agree to our
+            <a class="text-blue-600" href="#">
+              Terms
+            </a>
+            ,
+            <a class="text-blue-600" href="#">
+              Privacy Policy
+            </a>
+            and
+            <a class="text-blue-600" href="#">
+              Cookies Policy
+            </a>
+            . Light weight messaging software. More effective than any other messaging software.
+          </p>
+          
+          <button class="w-full bg-green-600 text-white p-2 rounded font-bold">
+            Sign Up
+          </button>
         </form>
-
-        <a href="index.php" class="signup-link">Already have an account? Log In</a>
+        
+        <div class="text-center mt-4">
+          <a class="text-blue-600" href="index.php">
+            Already have an account? Log In
+          </a>
+        </div>
+      </div>
     </div>
-</div>
-
+  </div>
 </body>
 </html>
