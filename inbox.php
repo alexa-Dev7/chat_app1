@@ -58,7 +58,7 @@ $users = json_decode(file_get_contents('persistent_data/users.json'), true) ?? [
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
         document.getElementById('chatWindow').style.display = 'block';
-        loadChat();  // Load existing messages
+        loadChat();
     }
 
     // Load chat messages (polls every second)
