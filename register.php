@@ -1,40 +1,55 @@
 <?php
+session_start();
+
+// Load users.json (or create if missing)
+$usersFile = 'persistent_data/users.json';
+$users = file_exists($usersFile) ? json_decode(file_get_contents($usersFile), true) : [];
+
+// Handle registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $users = json_decode(file_get_contents('persistent_data/users.json'), true);
-
     $username = trim($_POST['username']);
-    $password = password_hash(trim($_POST['password']), PASSWORD_DEFAULT);
+    $password = trim($_POST['password']);
 
-    if (!isset($users[$username])) {
-        $users[$username] = ['password' => $password];
-        file_put_contents('persistent_data/users.json', json_encode($users));
-
-        header("Location: index.php");
-        exit();
-    } else {
+    if (isset($users[$username])) {
         $error = "Username already exists!";
+    } else {
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $users[$username] = ['password' => $hashedPassword];
+        file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT));
+        $_SESSION['username'] = $username;
+        header('Location: inbox.php');
+        exit();
     }
 }
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <link rel="stylesheet" href="assets/styles.css">
-    <title>Register</title>
+    <title>Register - Red Pages</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
 <div class="login-container">
-    <h2>Register</h2>
-    <form method="post">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Register</button>
-        <p>Already have an account? <a href="index.php">Login here</a></p>
-        <?= isset($error) ? "<p class='error'>$error</p>" : "" ?>
-    </form>
+    <div class="login-content">
+        <h1>Sign Up</h1>
+        <p>Create a new account to join Red Pages.</p>
+
+        <?php if (!empty($error)): ?>
+            <p class="error"><?= htmlspecialchars($error) ?></p>
+        <?php endif; ?>
+
+        <form action="register.php" method="post">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Sign Up</button>
+        </form>
+
+        <a href="index.php" class="signup-link">Already have an account? Log In</a>
+    </div>
 </div>
 
 </body>
