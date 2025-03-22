@@ -1,34 +1,52 @@
 <?php
-// load_chat.php
+// load_chat.php — Secure, clean, ready for encryption!
 
-// Ensure no output before session starts
 ob_start();
 session_start();
 
-// Check user session
+// Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo "Error: Not logged in!";
+    echo json_encode(["error" => "Not logged in"]);
     exit();
 }
 
-// Load data
+// Get current user and chat partner
 $username = $_SESSION['username'];
 $currentChatUser = $_GET['user'] ?? null;
 
-$messages = json_decode(file_get_contents('persistent_data/messages.json'), true) ?? [];
-
-// Build chat content
-$chatContent = '';
-foreach ($messages as $msg) {
-    if (($msg['from'] === $username && $msg['to'] === $currentChatUser) ||
-        ($msg['from'] === $currentChatUser && $msg['to'] === $username)) {
-        $chatContent .= "<div class='message " . 
-            ($msg['from'] === $username ? 'outgoing' : 'incoming') . 
-            "'>" . htmlspecialchars($msg['text']) . "</div>";
-    }
+if (!$currentChatUser || $currentChatUser === $username) {
+    echo json_encode(["error" => "Invalid chat request"]);
+    exit();
 }
 
-echo $chatContent;
+// Load messages
+$messagesFile = 'persistent_data/messages.json';
+$messages = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
 
-// Ensure no unwanted output messes with the response
+// Check if conversation exists between these two users
+if (
+    !isset($messages[$username][$currentChatUser]) &&
+    !isset($messages[$currentChatUser][$username])
+) {
+    echo json_encode(["error" => "Unauthorized chat"]);
+    exit();
+}
+
+// Load the conversation
+$conversation = $messages[$username][$currentChatUser] ?? $messages[$currentChatUser][$username] ?? [];
+
+// Format chat messages (supports encryption placeholders)
+$chatContent = '';
+foreach ($conversation as $msg) {
+    $isOwn = $msg['from'] === $username;
+    $text = htmlspecialchars($msg['text']);
+
+    // Placeholder for future decryption logic
+    // $text = decryptMessage($msg['text']);
+
+    $chatContent .= "<div class='message " . ($isOwn ? 'outgoing' : 'incoming') . "'>{$text}</div>";
+}
+
+// Output clean content (no accidental output errors)
+echo $chatContent;
 ob_end_flush();
