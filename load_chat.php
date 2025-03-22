@@ -1,52 +1,41 @@
 <?php
-// load_chat.php — Secure, clean, ready for encryption!
-
-ob_start();
+// Secure load_chat.php
 session_start();
 
-// Ensure the user is logged in
-if (!isset($_SESSION['username'])) {
-    echo json_encode(["error" => "Not logged in"]);
+// Ensure user is logged in
+if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
+    echo "Error: Unauthorized access!";
     exit();
 }
 
-// Get current user and chat partner
 $username = $_SESSION['username'];
-$currentChatUser = $_GET['user'] ?? null;
+$currentChatUser = trim($_GET['user']);
 
-if (!$currentChatUser || $currentChatUser === $username) {
-    echo json_encode(["error" => "Invalid chat request"]);
+// Ensure User A can only chat with User B (not snoop on other users)
+if ($currentChatUser === $username) {
+    echo "Error: You can't chat with yourself!";
     exit();
 }
 
-// Load messages
-$messagesFile = 'persistent_data/messages.json';
-$messages = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
+// Load messages data
+$messages = json_decode(file_get_contents('persistent_data/messages.json'), true) ?? [];
 
-// Check if conversation exists between these two users
-if (
-    !isset($messages[$username][$currentChatUser]) &&
-    !isset($messages[$currentChatUser][$username])
-) {
-    echo json_encode(["error" => "Unauthorized chat"]);
-    exit();
-}
-
-// Load the conversation
-$conversation = $messages[$username][$currentChatUser] ?? $messages[$currentChatUser][$username] ?? [];
-
-// Format chat messages (supports encryption placeholders)
+// Build chat content — only allow chats where User A is part of the conversation
 $chatContent = '';
-foreach ($conversation as $msg) {
-    $isOwn = $msg['from'] === $username;
-    $text = htmlspecialchars($msg['text']);
-
-    // Placeholder for future decryption logic
-    // $text = decryptMessage($msg['text']);
-
-    $chatContent .= "<div class='message " . ($isOwn ? 'outgoing' : 'incoming') . "'>{$text}</div>";
+foreach ($messages as $msg) {
+    if (
+        ($msg['from'] === $username && $msg['to'] === $currentChatUser) ||
+        ($msg['from'] === $currentChatUser && $msg['to'] === $username)
+    ) {
+        $chatContent .= "<div class='message " . 
+            ($msg['from'] === $username ? 'outgoing' : 'incoming') . 
+            "'>" . htmlspecialchars($msg['text']) . "</div>";
+    }
 }
 
-// Output clean content (no accidental output errors)
+// If no messages exist between users, show a friendly message
+if (empty($chatContent)) {
+    $chatContent = "<div class='message notice'>No messages yet. Start the conversation!</div>";
+}
+
 echo $chatContent;
-ob_end_flush();
