@@ -1,19 +1,15 @@
 <?php
 session_start();
 
-// Secure Database Connection Setup for Render PostgreSQL
-$host = getenv('DB_HOST') ?: 'dpg-cvf3tfjqf0us73flfkv0-a';
-$dbname = getenv('DB_NAME') ?: 'chat_app_ltof';
-$user = getenv('DB_USER') ?: 'chat_app_ltof_user';
-$password = getenv('DB_PASSWORD') ?: 'JtFCFOztPWwHSS6wV4gXbTSzlV6barfq';
-$port = getenv('DB_PORT') ?: 5432;
+// Database connection setup
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";
+$dbname = "chat_app_ltof";
+$user = "chat_app_ltof_user";
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
 
 try {
-    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("❌ Database connection failed: " . $e->getMessage());
 }
@@ -25,46 +21,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim($_POST['password']);
     $email = trim($_POST['email']);
 
-    // Basic form validation
-    if (empty($username) || empty($password) || empty($email)) {
-        $error = "❌ All fields are required!";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = "❌ Invalid email format!";
-    } else {
-        try {
-            // Check if the username already exists
-            $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :username");
-            $stmt->execute(['username' => $username]);
-            $existingUser = $stmt->fetch();
+    try {
+        // Ensure users table exists
+        $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
 
-            if ($existingUser) {
-                $error = "❌ Username already taken!";
-            } else {
-                // Hash the password securely
-                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        // Check if username exists
+        $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :username");
+        $stmt->execute(['username' => $username]);
+        $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                // Insert user data into the database
-                $stmt = $pdo->prepare("INSERT INTO users (username, password, email, created_at) 
-                                       VALUES (:username, :password, :email, NOW())");
-                $stmt->execute([
-                    'username' => $username,
-                    'password' => $hashedPassword,
-                    'email' => $email
-                ]);
+        if ($existingUser) {
+            $error = "⚠️ Username already exists!";
+        } else {
+            // Hash password and insert new user
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-                // Start session for the new user
-                $_SESSION['username'] = $username;
+            $stmt = $pdo->prepare("INSERT INTO users (username, password, email, created_at) 
+                                   VALUES (:username, :password, :email, NOW())");
+            $stmt->execute([
+                'username' => $username,
+                'password' => $hashedPassword,
+                'email' => $email
+            ]);
 
-                // Redirect to inbox after successful signup
-                header('Location: inbox.php');
-                exit();
-            }
-        } catch (PDOException $e) {
-            $error = "❌ Registration failed: " . $e->getMessage();
+            // Start session and redirect
+            $_SESSION['username'] = $username;
+            header('Location: inbox.php');
+            exit();
         }
+    } catch (PDOException $e) {
+        $error = "❌ Registration failed: " . $e->getMessage();
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
