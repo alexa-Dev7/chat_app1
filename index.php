@@ -1,15 +1,14 @@
 <?php
 session_start();
 
-// Database connection setup for Render PostgreSQL
-$host = getenv('DB_HOST') ?: 'dpg-cvf3tfjqf0us73flfkv0-a';
-$dbname = getenv('DB_NAME') ?: 'chat_app_ltof';
-$user = getenv('DB_USER') ?: 'chat_app_ltof_user';
-$password = getenv('DB_PASSWORD') ?: 'JtFCFOztPWwHSS6wV4gXbTSzlV6barfq';
-$port = getenv('DB_PORT') ?: 5432;
+// Database connection setup
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";
+$dbname = "chat_app_ltof";
+$user = "chat_app_ltof_user";
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
 
 try {
-    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("❌ Database connection failed: " . $e->getMessage());
@@ -22,13 +21,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim($_POST['password']);
 
     try {
-        // Check if user exists
+        // Ensure users table exists
+        $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        // Fetch user from database
         $stmt = $pdo->prepare("SELECT username, password FROM users WHERE username = :username");
         $stmt->execute(['username' => $username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password'])) {
-            // Set session and redirect to inbox
             $_SESSION['username'] = $username;
             header('Location: inbox.php');
             exit();
@@ -40,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
