@@ -5,7 +5,7 @@ require 'db_connect.php';
 try {
     // Create Users table
     $pdo->exec("
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE users (
             id SERIAL PRIMARY KEY,
             username VARCHAR(50) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
@@ -15,7 +15,7 @@ try {
 
     // Create Messages table
     $pdo->exec("
-        CREATE TABLE IF NOT EXISTS messages (
+        CREATE TABLE messages (
             id SERIAL PRIMARY KEY,
             sender VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
             receiver VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
@@ -26,7 +26,7 @@ try {
 
     // Create Sessions table
     $pdo->exec("
-        CREATE TABLE IF NOT EXISTS sessions (
+        CREATE TABLE IF sessions (
             id SERIAL PRIMARY KEY,
             username VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
             session_id VARCHAR(255) NOT NULL,
