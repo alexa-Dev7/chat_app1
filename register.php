@@ -1,14 +1,18 @@
 <?php
 session_start();
 
-// Ensure persistent_data directory exists
-if (!file_exists('persistent_data')) {
-    mkdir('persistent_data', 0777, true);
-}
+// Database connection setup for Render PostgreSQL
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";
+$dbname = "chat_app_ltof";
+$user = "chat_app_ltof_user";
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
 
-// Load users.json (or create if missing)
-$usersFile = 'persistent_data/users.json';
-$users = file_exists($usersFile) ? json_decode(file_get_contents($usersFile), true) : [];
+try {
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
+}
 
 // Handle registration
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,27 +20,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim($_POST['password']);
     $email = trim($_POST['email']);
 
-    // Check if the username already exists
-    if (isset($users[$username])) {
-        $error = "Username already exists!";
-    } else {
-        // Save user data securely
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $users[$username] = [
-            'password' => $hashedPassword,
-            'email' => $email,
-            'created_at' => date('Y-m-d H:i:s'),
-        ];
+    try {
+        // Check if the username already exists
+        $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :username");
+        $stmt->execute(['username' => $username]);
+        $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Save data persistently to JSON
-        file_put_contents($usersFile, json_encode($users, JSON_PRETTY_PRINT));
+        if ($existingUser) {
+            $error = "Username already exists!";
+        } else {
+            // Hash the password and save user data
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // Start session for the new user
-        $_SESSION['username'] = $username;
+            $stmt = $pdo->prepare("INSERT INTO users (username, password, email, created_at) VALUES (:username, :password, :email, NOW())");
+            $stmt->execute([
+                'username' => $username,
+                'password' => $hashedPassword,
+                'email' => $email
+            ]);
 
-        // Redirect to inbox after signup
-        header('Location: inbox.php');
-        exit();
+            // Start session for the new user
+            $_SESSION['username'] = $username;
+
+            // Redirect to inbox after signup
+            header('Location: inbox.php');
+            exit();
+        }
+    } catch (PDOException $e) {
+        $error = "Registration failed: " . $e->getMessage();
     }
 }
 ?>
@@ -108,5 +119,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
 </body>
 </html>
-
-
