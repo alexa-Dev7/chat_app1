@@ -6,12 +6,12 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-// Database connection (Render PostgreSQL setup)
-$host = "dpg-cvf3tfjqf0us73flfkv0-a";  // Replace with your Render host
-$dbname = "chat_app_ltof";                      // Your database name
-$user = "chat_app_ltof_user";                      // Your Render username
-$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";          // Your Render password
-$port = 5432;                                // Default PostgreSQL port
+// Database connection setup
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";  
+$dbname = "chat_app_ltof";                      
+$user = "chat_app_ltof_user";                      
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";          
+$port = 5432;                                
 
 // Connect to PostgreSQL database
 try {
@@ -29,7 +29,7 @@ $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Load the last active chat (optional enhancement)
+// Load the last active chat
 $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 ?>
 
@@ -59,7 +59,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         </div>
     </div>
 
-    <!-- Chat Window (Initially Hidden) -->
+    <!-- Chat Window -->
     <div class="chat-window" id="chatWindow" style="display: <?= $lastChatUser ? 'block' : 'none' ?>;">
         <h3 id="chatWith">Chat with <?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?></h3>
         <div id="chatBody" class="chat-body"></div>
@@ -76,7 +76,6 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-    // Open chat window immediately when clicking the button
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -84,26 +83,22 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         loadChat();
     }
 
-    // Load chat messages (polls every second)
-function loadChat() {
-    if (currentChatUser !== '') {
-        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error("Chat Error:", data.error);
-                    document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
-                    return;
-                }
-                document.getElementById('chatBody').innerHTML = data.messages;
-                document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-            })
-            .catch(err => console.error('Error loading chat:', err));
+    function loadChat() {
+        if (currentChatUser !== '') {
+            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                        return;
+                    }
+                    document.getElementById('chatBody').innerHTML = data.messages;
+                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+                })
+                .catch(err => console.error('Error loading chat:', err));
+        }
     }
-}
 
-
-    // Send a message without page reload
     function sendMessage(event) {
         event.preventDefault();
         const message = document.getElementById('messageInput').value;
@@ -120,7 +115,6 @@ function loadChat() {
         }
     }
 
-    // Auto-refresh chat every second
     setInterval(loadChat, 1000);
 </script>
 
