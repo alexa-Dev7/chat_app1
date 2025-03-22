@@ -85,22 +85,23 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     }
 
     // Load chat messages (polls every second)
-    function loadChat() {
-        if (currentChatUser !== '') {
-            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert("Access denied: Unauthorized chat.");
-                        document.getElementById('chatWindow').style.display = 'none';
-                        return;
-                    }
-                    document.getElementById('chatBody').innerHTML = data.messages;
-                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-                })
-                .catch(err => console.error('Error loading chat:', err));
-        }
+function loadChat() {
+    if (currentChatUser !== '') {
+        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error("Chat Error:", data.error);
+                    document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                    return;
+                }
+                document.getElementById('chatBody').innerHTML = data.messages;
+                document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+            })
+            .catch(err => console.error('Error loading chat:', err));
     }
+}
+
 
     // Send a message without page reload
     function sendMessage(event) {
