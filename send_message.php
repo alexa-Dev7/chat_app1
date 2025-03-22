@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'db_connect.php'; 
+require 'db_connect.php';
 
 // Ensure user is logged in and inputs are valid
 if (!isset($_SESSION['username']) || !isset($_POST['to']) || !isset($_POST['message'])) {
@@ -46,4 +46,3 @@ try {
     error_log("❌ Failed to send message: " . $e->getMessage());
     echo json_encode(["error" => "Failed to send message"]);
 }
-?>
