@@ -14,13 +14,13 @@ try {
         )
     ");
 
-DROP TABLE IF EXISTS messages;
-
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
-    sender VARCHAR(50) NOT NULL,
-    recipient VARCHAR(50) NOT NULL,
+    sender VARCHAR(255) NOT NULL,
+    recipient VARCHAR(255) NOT NULL,
     text TEXT NOT NULL,
+    aes_key TEXT NOT NULL,
+    iv TEXT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
