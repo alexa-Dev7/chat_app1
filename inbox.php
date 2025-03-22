@@ -1,17 +1,16 @@
 <?php
-// Start session
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
     exit();
 }
 
-// Database connection setup
-$host = "dpg-cvf3tfjqf0us73flfkv0-a";  
-$dbname = "chat_app_ltof";                      
-$user = "chat_app_ltof_user";                      
-$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";          
-$port = 5432;                                
+// Database connection (Render PostgreSQL setup)
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";
+$dbname = "chat_app_ltof";
+$user = "chat_app_ltof_user";
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
+$port = 5432;
 
 // Connect to PostgreSQL database
 try {
@@ -21,7 +20,7 @@ try {
     die("❌ Database connection failed: " . $e->getMessage());
 }
 
-// Get the logged-in username
+// Get the logged-in user
 $username = $_SESSION['username'];
 
 // Fetch all users except the current user
@@ -29,7 +28,6 @@ $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Load the last active chat
 $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 ?>
 
@@ -45,7 +43,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 
 <div class="chat-container">
 
-    <!-- Sidebar with user list -->
+    <!-- Sidebar User List -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>All Users</h3>
@@ -82,22 +80,22 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         document.getElementById('chatWindow').style.display = 'block';
         loadChat();
     }
-function loadChat() {
-    if (currentChatUser !== '') {
-        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error("Chat Error:", data.error);
-                    document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
-                    return;
-                }
-                document.getElementById('chatBody').innerHTML = data.messages;
-                document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-            })
-            .catch(err => console.error('Error loading chat:', err));
+
+    function loadChat() {
+        if (currentChatUser !== '') {
+            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                        return;
+                    }
+                    document.getElementById('chatBody').innerHTML = data.messages;
+                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+                })
+                .catch(err => console.error('Error loading chat:', err));
+        }
     }
-}
 
     function sendMessage(event) {
         event.preventDefault();
