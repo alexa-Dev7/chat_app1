@@ -49,3 +49,5 @@ try {
     die("❌ Database setup failed: " . $e->getMessage());
 }
 ?>
+
+
