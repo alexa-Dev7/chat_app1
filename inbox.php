@@ -5,8 +5,25 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
+// Database connection
+$host = "localhost";
+$dbname = "chat_app";
+$user = "root";
+$password = "";
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
+}
+
 $username = $_SESSION['username'];
-$users = json_decode(file_get_contents('persistent_data/users.json'), true) ?? [];
+
+// Fetch all users except the current user
+$stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
+$stmt->execute(['username' => $username]);
+$users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
 // Load the last active chat (optional enhancement)
 $lastChatUser = $_SESSION['last_chat_user'] ?? null;
@@ -28,13 +45,11 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>All Users</h3>
         <div class="user-list">
-            <?php foreach ($users as $user => $data): ?>
-                <?php if ($user !== $username): ?>
-                    <div class="user">
-                        <span><?= htmlspecialchars($user) ?></span>
-                        <button class="message-btn" onclick="openChat('<?= htmlspecialchars($user) ?>')">Message</button>
-                    </div>
-                <?php endif; ?>
+            <?php foreach ($users as $user): ?>
+                <div class="user">
+                    <span><?= htmlspecialchars($user) ?></span>
+                    <button class="message-btn" onclick="openChat('<?= htmlspecialchars($user) ?>')">Message</button>
+                </div>
             <?php endforeach; ?>
         </div>
     </div>
