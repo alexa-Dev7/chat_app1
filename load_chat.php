@@ -1,11 +1,11 @@
 <?php
-// Secure load_chat.php
+// Secure load_chat.php — updated version
 session_start();
-require 'db_connect.php';  // Ensure database connection is loaded
+require 'db_connect.php';  
 
-// Ensure user is logged in
+// Ensure user is logged in and a recipient is provided
 if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
-    echo "Error: Unauthorized access!";
+    echo json_encode(["error" => "Unauthorized access!"]);
     exit();
 }
 
@@ -14,17 +14,18 @@ $currentChatUser = trim($_GET['user']);
 
 // Prevent users from chatting with themselves
 if ($currentChatUser === $username) {
-    echo "Error: You can't chat with yourself!";
+    echo json_encode(["error" => "You can't chat with yourself!"]);
     exit();
 }
 
-// === Load messages from PostgreSQL === //
 try {
+    // === Fetch messages between current user and chat partner === //
     $stmt = $pdo->prepare(
-        "SELECT * FROM messages 
-        WHERE (sender = :username AND receiver = :currentChatUser) 
-        OR (sender = :currentChatUser AND receiver = :username) 
-        ORDER BY timestamp ASC"
+        "SELECT sender, receiver, content, timestamp 
+         FROM messages 
+         WHERE (sender = :username AND receiver = :currentChatUser) 
+         OR (sender = :currentChatUser AND receiver = :username) 
+         ORDER BY timestamp ASC"
     );
 
     $stmt->execute([
@@ -37,20 +38,29 @@ try {
     // === Build chat content dynamically === //
     $chatContent = '';
     foreach ($messages as $msg) {
-        // Determine if message is outgoing or incoming
+        // Determine message direction (outgoing/incoming)
+        $isOutgoing = $msg['sender'] === $username;
+
         $chatContent .= "<div class='message " . 
-            ($msg['sender'] === $username ? 'outgoing' : 'incoming') . 
-            "'>" . htmlspecialchars($msg['content']) . "</div>";
+            ($isOutgoing ? 'outgoing' : 'incoming') . 
+            "'>";
+
+        $chatContent .= "<p>" . htmlspecialchars($msg['content']) . "</p>";
+
+        // Format timestamp
+        $chatContent .= "<span class='timestamp'>" . date('h:i A', strtotime($msg['timestamp'])) . "</span>";
+
+        $chatContent .= "</div>";
     }
 
-    // If no messages exist between users, show a friendly message
+    // If no messages yet, show a friendly notice
     if (empty($chatContent)) {
         $chatContent = "<div class='message notice'>No messages yet. Start the conversation!</div>";
     }
 
-    echo $chatContent;
+    echo json_encode(["messages" => $chatContent]);
 
 } catch (PDOException $e) {
     error_log("❌ Error loading messages: " . $e->getMessage());
-    echo "Error: Unable to load chat!";
-}        
+    echo json_encode(["error" => "Unable to load chat!"]);
+}
