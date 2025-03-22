@@ -70,6 +70,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     </div>
 
 </div>
+fetch('https://chat-app-1-zm1t.onrender.com/load_chat.php')
 
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
@@ -81,21 +82,29 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         loadChat();
     }
 
-    function loadChat() {
-        if (currentChatUser !== '') {
-            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
-                        return;
-                    }
-                    document.getElementById('chatBody').innerHTML = data.messages;
-                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-                })
-                .catch(err => console.error('Error loading chat:', err));
-        }
+function loadChat() {
+    if (currentChatUser !== '') {
+        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                    return;
+                }
+                document.getElementById('chatBody').innerHTML = data.messages;
+                document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+            })
+            .catch(err => {
+                console.error('Error loading chat:', err);
+                document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ Failed to load messages. Check your internet connection.</p>`;
+            });
     }
+}
 
     function sendMessage(event) {
         event.preventDefault();
