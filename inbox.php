@@ -7,6 +7,9 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username'];
 $users = json_decode(file_get_contents('persistent_data/users.json'), true) ?? [];
+
+// Load the last active chat (optional enhancement)
+$lastChatUser = $_SESSION['last_chat_user'] ?? null;
 ?>
 
 <!DOCTYPE html>
@@ -37,8 +40,8 @@ $users = json_decode(file_get_contents('persistent_data/users.json'), true) ?? [
     </div>
 
     <!-- Chat Window (Initially Hidden) -->
-    <div class="chat-window" id="chatWindow" style="display: none;">
-        <h3 id="chatWith">Chat with </h3>
+    <div class="chat-window" id="chatWindow" style="display: <?= $lastChatUser ? 'block' : 'none' ?>;">
+        <h3 id="chatWith">Chat with <?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?></h3>
         <div id="chatBody" class="chat-body"></div>
 
         <!-- Message Input -->
@@ -51,7 +54,7 @@ $users = json_decode(file_get_contents('persistent_data/users.json'), true) ?? [
 </div>
 
 <script>
-    let currentChatUser = '';
+    let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
     // Open chat window immediately when clicking the button
     function openChat(user) {
@@ -65,11 +68,17 @@ $users = json_decode(file_get_contents('persistent_data/users.json'), true) ?? [
     function loadChat() {
         if (currentChatUser !== '') {
             fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.text())
+                .then(response => response.json())
                 .then(data => {
-                    document.getElementById('chatBody').innerHTML = data;
+                    if (data.error) {
+                        alert("Access denied: Unauthorized chat.");
+                        document.getElementById('chatWindow').style.display = 'none';
+                        return;
+                    }
+                    document.getElementById('chatBody').innerHTML = data.messages;
                     document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-                });
+                })
+                .catch(err => console.error('Error loading chat:', err));
         }
     }
 
