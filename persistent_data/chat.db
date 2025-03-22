@@ -1,0 +1,40 @@
+<?php
+$dbFile = 'persistent_data/chat.db';
+if (!file_exists('persistent_data')) mkdir('persistent_data', 0777, true);
+
+try {
+    $db = new PDO('sqlite:' . $dbFile);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // Create Users table
+    $db->exec("CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL
+    )");
+
+    // Create Messages table
+    $db->exec("CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_user TEXT NOT NULL,
+        to_user TEXT NOT NULL,
+        text TEXT NOT NULL,
+        timestamp INTEGER DEFAULT (strftime('%s', 'now'))
+    )");
+
+    // Create Sessions table (optional)
+    $db->exec("CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        session_token TEXT NOT NULL,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+    )");
+
+    // Add a test user (optional)
+    $db->exec("INSERT OR IGNORE INTO users (username, password) VALUES 
+        ('admin', '" . password_hash('admin123', PASSWORD_DEFAULT) . "')");
+
+    echo "✅ Database and tables set up successfully!";
+} catch (PDOException $e) {
+    echo "⚠️ Database setup failed: " . $e->getMessage();
+}
