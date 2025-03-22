@@ -124,6 +124,23 @@ function loadChat() {
 
     setInterval(loadChat, 1000);
 </script>
+<script>
+    let retryCount = 0;
+const maxRetries = 5;
+
+function loadChatWithRetry() {
+    loadChat().catch(() => {
+        retryCount++;
+        if (retryCount <= maxRetries) {
+            console.log(`Retrying... (${retryCount}/${maxRetries})`);
+            setTimeout(loadChatWithRetry, 2000); // retry every 2 seconds
+        } else {
+            console.error("Max retries reached. Check server or internet.");
+        }
+    });
+}
+
+</script>
 
 </body>
 </html>
