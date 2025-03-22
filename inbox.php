@@ -87,15 +87,13 @@ function loadChat() {
         fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
             .then(response => response.json())
             .then(data => {
-                const chatBody = document.getElementById('chatBody');
                 if (data.error) {
                     console.error("Chat Error:", data.error);
-                    chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                    document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
                     return;
                 }
-                console.log('Loaded messages:', data.messages);  // Debug
-                chatBody.innerHTML = data.messages;
-                chatBody.scrollTop = chatBody.scrollHeight;
+                document.getElementById('chatBody').innerHTML = data.messages;
+                document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
             })
             .catch(err => console.error('Error loading chat:', err));
     }
