@@ -13,14 +13,13 @@ try {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
-
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
-    sender VARCHAR(255) NOT NULL,
-    recipient VARCHAR(255) NOT NULL,
+    sender VARCHAR(50) NOT NULL,
+    recipient VARCHAR(50) NOT NULL,
     text TEXT NOT NULL,
-    aes_key TEXT NOT NULL,
-    iv TEXT NOT NULL,
+    aes_key TEXT DEFAULT '',
+    iv TEXT DEFAULT '',
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
