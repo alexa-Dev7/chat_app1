@@ -1,6 +1,7 @@
 <?php
-// send_message.php — Now with E2EE (RSA + AES encryption)!
+// send_message.php — Now with PostgreSQL + E2EE (RSA + AES encryption)!
 session_start();
+require 'db_connect.php'; // Include PostgreSQL connection setup
 
 // Ensure user is logged in and inputs are valid
 if (!isset($_SESSION['username']) || !isset($_POST['to']) || !isset($_POST['message'])) {
@@ -18,29 +19,26 @@ if ($to === $username || $message === '') {
     exit();
 }
 
-// Load users and verify recipient exists
-$usersFile = 'persistent_data/users.json';
-$users = file_exists($usersFile) ? json_decode(file_get_contents($usersFile), true) : [];
+// === USER VALIDATION CHECK === //
+// Ensure recipient exists in PostgreSQL
+$recipientQuery = $pdo->prepare("SELECT username FROM users WHERE username = :to");
+$recipientQuery->execute([':to' => $to]);
 
-if (!isset($users[$to])) {
+if ($recipientQuery->rowCount() === 0) {
     echo json_encode(["error" => "Recipient not found"]);
     exit();
 }
 
-// Load messages data
-$messagesFile = 'persistent_data/messages.json';
-$messages = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
-
 // === RSA & AES ENCRYPTION === //
 
-// Generate an AES session key and IV
+// Generate AES session key and IV
 $aesKey = bin2hex(random_bytes(16));
 $iv = random_bytes(16);
 
 // Encrypt the message content with AES
 $encryptedMessage = openssl_encrypt($message, 'AES-256-CBC', $aesKey, 0, $iv);
 
-// Generate RSA key pair for each message (optional: store keys securely later)
+// Generate RSA key pair for this message
 $rsaKeyPair = openssl_pkey_new([
     "private_key_bits" => 2048,
     "private_key_type" => OPENSSL_KEYTYPE_RSA,
@@ -51,20 +49,19 @@ $publicKey = openssl_pkey_get_details($rsaKeyPair)['key'];
 // Encrypt the AES key with the RSA public key
 openssl_public_encrypt($aesKey, $encryptedAESKey, $publicKey);
 
-// Build the encrypted message object
-$newMessage = [
-    "from" => $username,
-    "to" => $to,
-    "text" => base64_encode($encryptedMessage),
-    "aes_key" => base64_encode($encryptedAESKey),
-    "iv" => base64_encode($iv),
-    "timestamp" => time()
-];
+// === STORE MESSAGE IN POSTGRESQL === //
+$messageInsert = $pdo->prepare("
+    INSERT INTO messages (sender, recipient, text, aes_key, iv, timestamp) 
+    VALUES (:from, :to, :text, :aes_key, :iv, :timestamp)
+");
 
-// Store the message under both sender and recipient for easy loading
-$messages[] = $newMessage;
-
-// Save the updated messages back to the JSON file
-file_put_contents($messagesFile, json_encode($messages, JSON_PRETTY_PRINT));
+$messageInsert->execute([
+    ':from' => $username,
+    ':to' => $to,
+    ':text' => base64_encode($encryptedMessage),
+    ':aes_key' => base64_encode($encryptedAESKey),
+    ':iv' => base64_encode($iv),
+    ':timestamp' => time()
+]);
 
 echo json_encode(["success" => "Message sent securely"]);
