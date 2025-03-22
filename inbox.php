@@ -1,4 +1,5 @@
 <?php
+// Start session
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
@@ -6,11 +7,11 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Database connection (Render PostgreSQL setup)
-$host = "dpg-cvf3tfjqf0us73flfkv0-a";
-$dbname = "chat_app_ltof";
-$user = "chat_app_ltof_user";
-$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
-$port = 5432;
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";  // Replace with your Render host
+$dbname = "chat_app_ltof";                      // Your database name
+$user = "chat_app_ltof_user";                      // Your Render username
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";          // Your Render password
+$port = 5432;                                // Default PostgreSQL port
 
 // Connect to PostgreSQL database
 try {
@@ -20,7 +21,7 @@ try {
     die("❌ Database connection failed: " . $e->getMessage());
 }
 
-// Get the logged-in user
+// Get the logged-in username
 $username = $_SESSION['username'];
 
 // Fetch all users except the current user
@@ -28,6 +29,7 @@ $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
+// Load the last active chat (optional enhancement)
 $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 ?>
 
@@ -43,7 +45,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 
 <div class="chat-container">
 
-    <!-- Sidebar User List -->
+    <!-- Sidebar with user list -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>All Users</h3>
@@ -57,7 +59,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         </div>
     </div>
 
-    <!-- Chat Window -->
+    <!-- Chat Window (Initially Hidden) -->
     <div class="chat-window" id="chatWindow" style="display: <?= $lastChatUser ? 'block' : 'none' ?>;">
         <h3 id="chatWith">Chat with <?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?></h3>
         <div id="chatBody" class="chat-body"></div>
@@ -70,11 +72,11 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     </div>
 
 </div>
-fetch('https://chat-app-1-zm1t.onrender.com/load_chat.php')
 
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
+    // Open chat window immediately when clicking the button
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -82,30 +84,26 @@ fetch('https://chat-app-1-zm1t.onrender.com/load_chat.php')
         loadChat();
     }
 
+    // Load chat messages (polls every second)
 function loadChat() {
     if (currentChatUser !== '') {
         fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.error) {
+                    console.error("Chat Error:", data.error);
                     document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
                     return;
                 }
                 document.getElementById('chatBody').innerHTML = data.messages;
                 document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
             })
-            .catch(err => {
-                console.error('Error loading chat:', err);
-                document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ Failed to load messages. Check your internet connection.</p>`;
-            });
+            .catch(err => console.error('Error loading chat:', err));
     }
 }
 
+
+    // Send a message without page reload
     function sendMessage(event) {
         event.preventDefault();
         const message = document.getElementById('messageInput').value;
@@ -122,24 +120,8 @@ function loadChat() {
         }
     }
 
+    // Auto-refresh chat every second
     setInterval(loadChat, 1000);
-</script>
-<script>
-    let retryCount = 0;
-const maxRetries = 5;
-
-function loadChatWithRetry() {
-    loadChat().catch(() => {
-        retryCount++;
-        if (retryCount <= maxRetries) {
-            console.log(`Retrying... (${retryCount}/${maxRetries})`);
-            setTimeout(loadChatWithRetry, 2000); // retry every 2 seconds
-        } else {
-            console.error("Max retries reached. Check server or internet.");
-        }
-    });
-}
-
 </script>
 
 </body>
