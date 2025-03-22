@@ -1,24 +1,30 @@
 <?php
-// Include DB connection
 require 'db_connect.php';
 
 try {
-    // Ensure UTF8 encoding and clean schema handling
-    $pdo->exec("SET NAMES 'utf8'");
+    echo "🚨 Resetting database...\n";
 
-    // Create Users table
+    // Drop existing tables if they exist
+    $pdo->exec("DROP TABLE IF EXISTS messages CASCADE");
+    $pdo->exec("DROP TABLE IF EXISTS sessions CASCADE");
+    $pdo->exec("DROP TABLE IF EXISTS users CASCADE");
+
+    echo "✅ Old tables dropped!\n";
+
+    // Recreate Users table
     $pdo->exec("
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE users (
             id SERIAL PRIMARY KEY,
             username VARCHAR(50) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
+    echo "✅ Users table recreated!\n";
 
-    // Create Messages table
+    // Recreate Messages table
     $pdo->exec("
-        CREATE TABLE IF NOT EXISTS messages (
+        CREATE TABLE messages (
             id SERIAL PRIMARY KEY,
             sender VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
             receiver VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
@@ -26,18 +32,20 @@ try {
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
+    echo "✅ Messages table recreated!\n";
 
-    // Create Sessions table — Fixed the typo!
+    // Recreate Sessions table (fixed typo "IF sessions")
     $pdo->exec("
-        CREATE TABLE IF NOT EXISTS sessions (
+        CREATE TABLE sessions (
             id SERIAL PRIMARY KEY,
             username VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
             session_id VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
+    echo "✅ Sessions table recreated!\n";
 
-    echo "✅ Database setup complete!";
+    echo "🎉 Database reset complete!";
 } catch (PDOException $e) {
-    die("❌ Database setup failed: " . $e->getMessage());
+    die("❌ Reset failed: " . $e->getMessage());
 }
