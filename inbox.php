@@ -8,7 +8,7 @@ if (!isset($_SESSION['username'])) {
 
 // Database connection (Render PostgreSQL setup)
 $host = "dpg-cvf3tfjqf0us73flfkv0-a";  // Replace with your Render host
-$dbname = "chat_app";                      // Your database name
+$dbname = "chat_app_ltof";                      // Your database name
 $user = "chat_app_ltof_user";                      // Your Render username
 $password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";          // Your Render password
 $port = 5432;                                // Default PostgreSQL port
