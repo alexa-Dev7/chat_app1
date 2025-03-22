@@ -13,14 +13,14 @@ try {
 
     // Recreate Users table
     $pdo->exec("
-     CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
+        CREATE TABLE users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ");
     echo "✅ Users table recreated!\n";
 
     // Recreate Messages table
@@ -35,7 +35,7 @@ try {
     ");
     echo "✅ Messages table recreated!\n";
 
-    // Recreate Sessions table (fixed typo "IF sessions")
+    // Recreate Sessions table
     $pdo->exec("
         CREATE TABLE sessions (
             id SERIAL PRIMARY KEY,
