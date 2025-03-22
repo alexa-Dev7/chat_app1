@@ -27,13 +27,14 @@ try {
 
     // ✅ Create Sessions table (fixed!)
     $pdo->exec("
-        CREATE TABLE IF NOT EXISTS sessions (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
-            session_id VARCHAR(255) NOT NULL UNIQUE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ");
+CREATE TABLE IF NOT EXISTS messages (
+    id SERIAL PRIMARY KEY,
+    sender VARCHAR(50) NOT NULL,
+    recipient VARCHAR(50) NOT NULL,
+    text TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 
     echo "✅ Database setup complete!";
 } catch (PDOException $e) {
