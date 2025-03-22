@@ -14,16 +14,16 @@ try {
         )
     ");
 
-    // Create Messages table
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS messages (
-            id SERIAL PRIMARY KEY,
-            sender VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
-            receiver VARCHAR(50) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
-            message TEXT NOT NULL,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ");
+DROP TABLE IF EXISTS messages;
+
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    sender VARCHAR(50) NOT NULL,
+    recipient VARCHAR(50) NOT NULL,
+    text TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 
     // ✅ Create Sessions table (fixed!)
     $pdo->exec("
