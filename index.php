@@ -1,14 +1,31 @@
 <?php
 session_start();
 
-$usersFile = 'persistent_data/users.json';
-$users = file_exists($usersFile) ? json_decode(file_get_contents($usersFile), true) : [];
+// Database connection setup for Render PostgreSQL
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";
+$dbname = "chat_app_ltof";
+$user = "chat_app_ltof_user";
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
 
+try {
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
+}
+
+// Handle login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
-    if (isset($users[$username]) && password_verify($password, $users[$username]['password'])) {
+    // Fetch user from the database
+    $stmt = $pdo->prepare("SELECT username, password FROM users WHERE username = :username");
+    $stmt->execute(['username' => $username]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Check password
+    if ($user && password_verify($password, $user['password'])) {
         $_SESSION['username'] = $username;
         header('Location: inbox.php');
         exit();
@@ -33,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     </style>
 </head>
+
 <body class="bg-gray-100">
   <div class="flex justify-center items-center min-h-screen">
     <div class="w-full max-w-md">
@@ -40,11 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h2 class="text-2xl font-bold text-center mb-2">
           Log in to Sender
         </h2>
-        
+
         <?php if (!empty($error)): ?>
           <p class="text-red-500 text-center mb-4"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
-        
+
         <form action="index.php" method="post">
           <div class="mb-4">
             <input class="w-full p-2 border border-gray-300 rounded" type="text" name="username" placeholder="Username" required />
@@ -56,13 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Log In
           </button>
         </form>
-        
+
         <div class="text-center mt-4">
-          <a class="text-blue-600" href="#">
-            Forgotten password?
-          </a>
+          <a class="text-blue-600" href="#">Forgotten password?</a>
         </div>
-        
+
         <div class="text-center mt-4">
           <hr class="my-4"/>
           <a href="register.php" class="w-full bg-green-600 text-white p-2 rounded font-bold block text-center">
