@@ -1,23 +1,27 @@
 <?php
+// Start session
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
     exit();
 }
 
-// Database connection
-$host = "localhost";
-$dbname = "chat_app";
-$user = "root";
-$password = "";
+// Database connection (Render PostgreSQL setup)
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";  // Replace with your Render host
+$dbname = "chat_app";                      // Your database name
+$user = "chat_app_ltof_user";                      // Your Render username
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";          // Your Render password
+$port = 5432;                                // Default PostgreSQL port
 
+// Connect to PostgreSQL database
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $password);
+    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    die("❌ Database connection failed: " . $e->getMessage());
 }
 
+// Get the logged-in username
 $username = $_SESSION['username'];
 
 // Fetch all users except the current user
@@ -36,6 +40,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     <title>Inbox | Messenger</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
+
 <body>
 
 <div class="chat-container">
