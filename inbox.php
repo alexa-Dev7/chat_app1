@@ -7,18 +7,7 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Database connection (Render PostgreSQL setup)
-$host = "dpg-cvfu9ennoe9s73bkltpg-a";
-$dbname = "pager_1n3k";
-$user = "pager_1n3k_user";
-$password = "XyB7njpb4E01Nl26iWWLJ30xMCDrlHux";
-$port = 5432;
-
-try {
-    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("❌ Database connection failed: " . $e->getMessage());
-}
+require 'db_connect.php';
 
 // Get logged-in username
 $username = $_SESSION['username'];
@@ -81,26 +70,23 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
         document.getElementById('chatWindow').style.display = 'block';
         loadChat();
-
-        // Store the user in session for future reference
-        fetch('update_last_chat_user.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `user=${encodeURIComponent(user)}`
-        });
     }
 
     // Load chat messages
     function loadChat() {
         if (currentChatUser !== '') {
             fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load chat');
+                    return response.json();
+                })
                 .then(data => {
                     if (data.error) {
                         console.error("Chat Error:", data.error);
                         document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
                         return;
                     }
+                    // Display messages or show "No messages yet"
                     document.getElementById('chatBody').innerHTML = data.messages || "<p class='notice'>No messages yet. Start chatting!</p>";
                     document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
                 })
@@ -111,7 +97,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         }
     }
 
-    // Send message without reloading
+    // Send a message without reloading
     function sendMessage(event) {
         event.preventDefault();
         const message = document.getElementById('messageInput').value.trim();
@@ -121,15 +107,18 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to send message');
+                return response.json();
+            })
             .then(data => {
                 if (data.error) {
                     console.error("Send Error:", data.error);
                     document.getElementById('chatBody').innerHTML += `<p class='error'>⚠️ ${data.error}</p>`;
                     return;
                 }
-                document.getElementById('messageInput').value = ''; // Clear input
-                loadChat(); // Reload chat to show the new message
+                document.getElementById('messageInput').value = '';
+                loadChat();
             })
             .catch(err => console.error('Error sending message:', err));
         }
