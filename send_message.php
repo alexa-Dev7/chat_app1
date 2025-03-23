@@ -2,6 +2,7 @@
 session_start();
 require 'db_connect.php';
 
+// Ensure user is logged in
 if (!isset($_SESSION['username']) || !isset($_POST['to']) || !isset($_POST['message'])) {
     echo json_encode(["error" => "Unauthorized access"]);
     exit();
@@ -40,7 +41,6 @@ try {
     ]);
 
     echo json_encode(["success" => "Message sent!"]);
-
 } catch (PDOException $e) {
     error_log("❌ Send message error: " . $e->getMessage());
     echo json_encode(["error" => "Failed to send message"]);
