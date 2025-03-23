@@ -12,10 +12,16 @@ $username = $_SESSION['username'];
 $chatUser = trim($_GET['user']);
 
 // Ensure recipient exists
-$stmt = $pdo->prepare("SELECT username FROM users WHERE username = :user");
-$stmt->execute([':user' => $chatUser]);
-if ($stmt->rowCount() === 0) {
-    echo json_encode(["error" => "Recipient not found"]);
+try {
+    $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :user");
+    $stmt->execute([':user' => $chatUser]);
+    if ($stmt->rowCount() === 0) {
+        echo json_encode(["error" => "Recipient not found"]);
+        exit();
+    }
+} catch (PDOException $e) {
+    error_log("❌ SQL Error while checking recipient: " . $e->getMessage());
+    echo json_encode(["error" => "Failed to check recipient"]);
     exit();
 }
 
@@ -33,9 +39,10 @@ try {
         ':chatUser' => $chatUser
     ]);
 
-    // Check if there are any errors in the query execution
+    // Log any SQL errors
     if ($stmt->errorCode() != '00000') {
-        echo json_encode(["error" => "Failed to load messages. SQL Error: " . implode(' ', $stmt->errorInfo())]);
+        error_log("❌ SQL Error during message fetching: " . implode(' ', $stmt->errorInfo()));
+        echo json_encode(["error" => "Failed to load messages. SQL Error"]);
         exit();
     }
 
