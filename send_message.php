@@ -2,10 +2,7 @@
 session_start();
 require 'db_connect.php';
 
-// Debugging session
-var_dump($_SESSION); // This will help you debug the session
-
-// Ensure user is logged in and inputs are valid
+// Debugging: Check session
 if (!isset($_SESSION['username'], $_POST['to'], $_POST['message'])) {
     echo json_encode(["error" => "Unauthorized access"]);
     exit();
@@ -21,25 +18,29 @@ if ($to === $username || $message === '') {
     exit();
 }
 
-// Fetch recipient's user ID
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :to");
-$stmt->execute([':to' => $to]);
-$recipient = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$recipient) {
-    echo json_encode(["error" => "Recipient not found"]);
+// Ensure recipient exists in the database
+try {
+    $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :to");
+    $stmt->execute([':to' => $to]);
+    if ($stmt->rowCount() === 0) {
+        echo json_encode(["error" => "Recipient not found"]);
+        exit();
+    }
+} catch (PDOException $e) {
+    error_log("❌ SQL Error while checking recipient: " . $e->getMessage());
+    echo json_encode(["error" => "Failed to check recipient"]);
     exit();
 }
-$recipientId = $recipient['id'];
 
-// Insert the message into DB
+// Insert the message into the database
 try {
     $stmt = $pdo->prepare("
         INSERT INTO messages (sender, recipient, text)
         VALUES (:from, :to, :text)
     ");
     $stmt->execute([
-        ':from' => $username, // the sender is the logged-in user
-        ':to' => $recipientId, // recipient's ID
+        ':from' => $username,
+        ':to' => $to,
         ':text' => htmlspecialchars($message)
     ]);
 
