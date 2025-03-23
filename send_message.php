@@ -29,14 +29,17 @@ if ($stmt->rowCount() === 0) {
 // Insert the message into DB
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO messages (sender, recipient, text)
-        VALUES (:from, :to, :text)
+        INSERT INTO messages (sender, recipient, text, timestamp)
+        VALUES (:from, :to, :text, NOW())  -- Adding timestamp
     ");
     $stmt->execute([
         ':from' => $username,
         ':to' => $to,
-        ':text' => htmlspecialchars($message)
+        ':text' => htmlspecialchars($message)  // Correctly escape special characters
     ]);
+
+    // Update the last chat user in session
+    $_SESSION['last_chat_user'] = $to; 
 
     echo json_encode(["success" => "Message sent!"]);
 
