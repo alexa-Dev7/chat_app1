@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="w-full max-w-md">
         <div class="bg-white p-6 rounded-lg shadow-lg">
             <h2 class="text-2xl font-bold text-center mb-2">
-                Log in to Sender
+                Log in to SENDER
             </h2>
 
             <!-- Error Display -->
