@@ -40,7 +40,7 @@ try {
         $isSender = ($msg['sender'] === $username);
         $chatHTML .= "<div class='message " . ($isSender ? "sent" : "received") . "'>";
         $chatHTML .= "<p>" . htmlspecialchars($msg['text']) . "</p>";
-        $chatHTML .= "<span>" . $msg['timestamp'] . "</span>";
+        $chatHTML .= "<span>" . date('Y-m-d H:i:s', strtotime($msg['timestamp'])) . "</span>";  // Format timestamp
         $chatHTML .= "</div>";
     }
 
