@@ -1,7 +1,5 @@
-
-
 <?php
-// Start session
+// Start session and check user login
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
@@ -9,13 +7,12 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Database connection (Render PostgreSQL setup)
-$host = "dpg-cvf3tfjqf0us73flfkv0-a";  // Replace with your Render host
-$dbname = "chat_app_ltof";                      // Your database name
-$user = "chat_app_ltof_user";                      // Your Render username
-$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";          // Your Render password
-$port = 5432;                                // Default PostgreSQL port
+$host = "dpg-cvf3tfjqf0us73flfkv0-a";
+$dbname = "chat_app_ltof";
+$user = "chat_app_ltof_user";
+$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
+$port = 5432;
 
-// Connect to PostgreSQL database
 try {
     $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -23,16 +20,16 @@ try {
     die("❌ Database connection failed: " . $e->getMessage());
 }
 
-// Get the logged-in username
+// Get logged-in username
 $username = $_SESSION['username'];
 
-// Fetch all users except the current user
+// Fetch all other users (excluding the logged-in user)
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Load the last active chat (optional enhancement)
-$lastChatUser = $_SESSION['last_chat_user'] ?? null;
+// Load last chat user if available
+$lastChatUser = $_SESSION['last_chat_user'] ?? '';
 ?>
 
 <!DOCTYPE html>
@@ -61,10 +58,10 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         </div>
     </div>
 
-    <!-- Chat Window (Initially Hidden) -->
+    <!-- Chat Window -->
     <div class="chat-window" id="chatWindow" style="display: <?= $lastChatUser ? 'block' : 'none' ?>;">
         <h3 id="chatWith">Chat with <?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?></h3>
-        <div id="chatBody" class="chat-body"></div>
+        <div id="chatBody" class="chat-body">⚙️ Loading chat...</div>
 
         <!-- Message Input -->
         <form id="chatForm" onsubmit="sendMessage(event)">
@@ -78,7 +75,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-    // Open chat window immediately when clicking the button
+    // Open chat with a user
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -86,39 +83,55 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         loadChat();
     }
 
-    // Load chat messages (polls every second)
-function loadChat() {
-    if (currentChatUser !== '') {
-        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error("Chat Error:", data.error);
-                    document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
-                    return;
-                }
-                document.getElementById('chatBody').innerHTML = data.messages;
-                document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-            })
-            .catch(err => console.error('Error loading chat:', err));
+    // Load chat messages
+    function loadChat() {
+        if (currentChatUser !== '') {
+            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to load chat');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        console.error("Chat Error:", data.error);
+                        document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                        return;
+                    }
+                    // Display messages or show "No messages yet"
+                    document.getElementById('chatBody').innerHTML = data.messages || "<p class='notice'>No messages yet. Start chatting!</p>";
+                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+                })
+                .catch(err => {
+                    console.error('Error loading chat:', err);
+                    document.getElementById('chatBody').innerHTML = "<p class='error'>⚠️ Failed to load messages. Please try again!</p>";
+                });
+        }
     }
-}
 
-
-    // Send a message without page reload
+    // Send a message without reloading
     function sendMessage(event) {
         event.preventDefault();
-        const message = document.getElementById('messageInput').value;
-        if (message.trim() !== '') {
+        const message = document.getElementById('messageInput').value.trim();
+        if (message !== '') {
             fetch('send_message.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
             })
-            .then(() => {
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to send message');
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    console.error("Send Error:", data.error);
+                    document.getElementById('chatBody').innerHTML += `<p class='error'>⚠️ ${data.error}</p>`;
+                    return;
+                }
                 document.getElementById('messageInput').value = '';
                 loadChat();
-            });
+            })
+            .catch(err => console.error('Error sending message:', err));
         }
     }
 
