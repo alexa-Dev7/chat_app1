@@ -18,28 +18,27 @@ if ($to === $username || $message === '') {
     exit();
 }
 
-// Ensure recipient exists
-$stmt = $pdo->prepare("SELECT username FROM users WHERE username = :to");
+// Fetch recipient's user ID
+$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :to");
 $stmt->execute([':to' => $to]);
-if ($stmt->rowCount() === 0) {
+$recipient = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$recipient) {
     echo json_encode(["error" => "Recipient not found"]);
     exit();
 }
+$recipientId = $recipient['id'];
 
 // Insert the message into DB
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO messages (sender, recipient, text, timestamp)
-        VALUES (:from, :to, :text, NOW())  -- Adding timestamp
+        INSERT INTO messages (sender, recipient, text)
+        VALUES (:from, :to, :text)
     ");
     $stmt->execute([
-        ':from' => $username,
-        ':to' => $to,
-        ':text' => htmlspecialchars($message)  // Correctly escape special characters
+        ':from' => $username, // the sender is the logged-in user
+        ':to' => $recipientId, // recipient's ID
+        ':text' => htmlspecialchars($message)
     ]);
-
-    // Update the last chat user in session
-    $_SESSION['last_chat_user'] = $to; 
 
     echo json_encode(["success" => "Message sent!"]);
 
