@@ -11,45 +11,47 @@ if (!isset($_SESSION['username'], $_GET['user'])) {
 $username = $_SESSION['username'];
 $chatUser = trim($_GET['user']);
 
-// Fetch user IDs for sender and recipient
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
-$stmt->execute([':username' => $username]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
-$userId = $user['id'];
-
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :chatUser");
-$stmt->execute([':chatUser' => $chatUser]);
-$chatUserId = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$chatUserId) {
+// Ensure recipient exists
+$stmt = $pdo->prepare("SELECT username FROM users WHERE username = :user");
+$stmt->execute([':user' => $chatUser]);
+if ($stmt->rowCount() === 0) {
     echo json_encode(["error" => "Recipient not found"]);
     exit();
 }
-
-$chatUserId = $chatUserId['id'];
 
 // Fetch messages between the two users
 try {
     $stmt = $pdo->prepare("
         SELECT sender, recipient, text, timestamp
         FROM messages
-        WHERE (sender = :userId AND recipient = :chatUserId)
-           OR (sender = :chatUserId AND recipient = :userId)
+        WHERE (sender = :username AND recipient = :chatUser)
+           OR (sender = :chatUser AND recipient = :username)
         ORDER BY timestamp ASC
     ");
     $stmt->execute([
-        ':userId' => $userId,
-        ':chatUserId' => $chatUserId
+        ':username' => $username,
+        ':chatUser' => $chatUser
     ]);
+
+    // Check if there are any errors in the query execution
+    if ($stmt->errorCode() != '00000') {
+        echo json_encode(["error" => "Failed to load messages. SQL Error: " . implode(' ', $stmt->errorInfo())]);
+        exit();
+    }
 
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $chatHTML = "";
-    foreach ($messages as $msg) {
-        $isSender = ($msg['sender'] === $userId);
-        $chatHTML .= "<div class='message " . ($isSender ? "sent" : "received") . "'>";
-        $chatHTML .= "<p>" . htmlspecialchars($msg['text']) . "</p>";
-        $chatHTML .= "<span>" . $msg['timestamp'] . "</span>";
-        $chatHTML .= "</div>";
+    if (count($messages) === 0) {
+        $chatHTML .= "<p class='notice'>No messages yet. Start chatting!</p>";
+    } else {
+        foreach ($messages as $msg) {
+            $isSender = ($msg['sender'] === $username);
+            $chatHTML .= "<div class='message " . ($isSender ? "sent" : "received") . "'>";
+            $chatHTML .= "<p>" . htmlspecialchars($msg['text']) . "</p>";
+            $chatHTML .= "<span>" . $msg['timestamp'] . "</span>";
+            $chatHTML .= "</div>";
+        }
     }
 
     echo json_encode(["messages" => $chatHTML]);
