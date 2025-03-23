@@ -2,6 +2,9 @@
 session_start();
 require 'db_connect.php';
 
+// Debugging session
+var_dump($_SESSION); // This will help you debug the session
+
 // Ensure user is logged in and inputs are valid
 if (!isset($_SESSION['username'], $_POST['to'], $_POST['message'])) {
     echo json_encode(["error" => "Unauthorized access"]);
