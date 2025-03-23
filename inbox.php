@@ -7,10 +7,10 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Database connection (Render PostgreSQL setup)
-$host = "dpg-cvf3tfjqf0us73flfkv0-a";
-$dbname = "chat_app_ltof";
-$user = "chat_app_ltof_user";
-$password = "JtFCFOztPWwHSS6wV4gXbTSzlV6barfq";
+$host = "dpg-cvfu9ennoe9s73bkltpg-a";
+$dbname = "pager_1n3k";
+$user = "pager_1n3k_user";
+$password = "XyB7njpb4E01Nl26iWWLJ30xMCDrlHux";
 $port = 5432;
 
 try {
