@@ -14,18 +14,18 @@ try {
         )
     ");
 
-    // ✅ Create Messages table
+    // ✅ Create Messages table (use INT for sender and recipient for foreign keys)
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS messages (
             id SERIAL PRIMARY KEY,
-            sender VARCHAR(50) NOT NULL,
-            recipient VARCHAR(50) NOT NULL,
+            sender INT NOT NULL,  -- Changed to INT to reference users(id)
+            recipient INT NOT NULL,  -- Changed to INT to reference users(id)
             text TEXT NOT NULL,
             aes_key TEXT DEFAULT '',
             iv TEXT DEFAULT '',
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (sender) REFERENCES users(username) ON DELETE CASCADE,
-            FOREIGN KEY (recipient) REFERENCES users(username) ON DELETE CASCADE
+            FOREIGN KEY (sender) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (recipient) REFERENCES users(id) ON DELETE CASCADE
         )
     ");
 
