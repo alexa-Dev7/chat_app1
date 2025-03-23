@@ -1,3 +1,5 @@
+
+
 <?php
 // Start session
 session_start();
@@ -76,15 +78,15 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-  // Open chat window on user click
-function openChat(user) {
-    currentChatUser = user;
-    document.getElementById('chatWith').innerText = `Chat with ${user}`;
-    document.getElementById('chatWindow').style.display = 'block';
-    loadChat();
-}
+    // Open chat window immediately when clicking the button
+    function openChat(user) {
+        currentChatUser = user;
+        document.getElementById('chatWith').innerText = `Chat with ${user}`;
+        document.getElementById('chatWindow').style.display = 'block';
+        loadChat();
+    }
 
-// Load chat messages
+    // Load chat messages (polls every second)
 function loadChat() {
     if (currentChatUser !== '') {
         fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
@@ -102,22 +104,27 @@ function loadChat() {
     }
 }
 
-// Send message without reload
-function sendMessage(event) {
-    event.preventDefault();
-    const message = document.getElementById('messageInput').value;
-    if (message.trim() !== '') {
-        fetch('send_message.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-        })
-        .then(() => {
-            document.getElementById('messageInput').value = '';
-            loadChat();
-        });
-    }
-}
 
-// Auto-refresh chat every second
-setInterval(loadChat, 1000);
+    // Send a message without page reload
+    function sendMessage(event) {
+        event.preventDefault();
+        const message = document.getElementById('messageInput').value;
+        if (message.trim() !== '') {
+            fetch('send_message.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+            })
+            .then(() => {
+                document.getElementById('messageInput').value = '';
+                loadChat();
+            });
+        }
+    }
+
+    // Auto-refresh chat every second
+    setInterval(loadChat, 1000);
+</script>
+
+</body>
+</html>
