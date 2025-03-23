@@ -1,5 +1,4 @@
 <?php
-// Start session and check user login
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
@@ -86,7 +85,6 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                         document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
                         return;
                     }
-                    // Display messages or show "No messages yet"
                     document.getElementById('chatBody').innerHTML = data.messages || "<p class='notice'>No messages yet. Start chatting!</p>";
                     document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
                 })
