@@ -2,7 +2,7 @@
 session_start();
 require 'db_connect.php';
 
-// Debug: Check if session username is set
+// Debugging: Check if session username is set
 if (!isset($_SESSION['username'], $_GET['user'])) {
     echo json_encode(["error" => "Unauthorized access"]);
     exit();
@@ -11,8 +11,8 @@ if (!isset($_SESSION['username'], $_GET['user'])) {
 $username = $_SESSION['username'];
 $chatUser = trim($_GET['user']);
 
-// Debugging: Check session and input values
-// var_dump($_SESSION, $chatUser); // Uncomment for debugging
+// Debugging: Log session and input
+error_log("Session Username: $username, Chat User: $chatUser");
 
 // Ensure recipient exists in the database
 try {
@@ -42,7 +42,7 @@ try {
         ':chatUser' => $chatUser
     ]);
 
-    // Check for any SQL errors
+    // Check if SQL executed successfully
     if ($stmt->errorCode() != '00000') {
         error_log("❌ SQL Error during message fetching: " . implode(' ', $stmt->errorInfo()));
         echo json_encode(["error" => "Failed to load messages. SQL Error"]);
@@ -51,7 +51,9 @@ try {
 
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Generate chat HTML
+    // Debugging: Check messages fetched
+    error_log("Fetched Messages: " . json_encode($messages));
+
     $chatHTML = "";
     if (count($messages) === 0) {
         $chatHTML .= "<p class='notice'>No messages yet. Start chatting!</p>";
