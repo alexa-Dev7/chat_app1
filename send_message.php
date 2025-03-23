@@ -44,6 +44,9 @@ try {
         ':text' => htmlspecialchars($message)
     ]);
 
+    // Debugging: Log successful message sending
+    error_log("Message sent successfully from $username to $to");
+
     echo json_encode(["success" => "Message sent!"]);
 
 } catch (PDOException $e) {
