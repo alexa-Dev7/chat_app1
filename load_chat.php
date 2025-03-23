@@ -11,36 +11,44 @@ if (!isset($_SESSION['username'], $_GET['user'])) {
 $username = $_SESSION['username'];
 $chatUser = trim($_GET['user']);
 
-// Ensure recipient exists
-$stmt = $pdo->prepare("SELECT username FROM users WHERE username = :user");
-$stmt->execute([':user' => $chatUser]);
-if ($stmt->rowCount() === 0) {
+// Fetch user IDs for sender and recipient
+$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
+$stmt->execute([':username' => $username]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
+$userId = $user['id'];
+
+$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :chatUser");
+$stmt->execute([':chatUser' => $chatUser]);
+$chatUserId = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$chatUserId) {
     echo json_encode(["error" => "Recipient not found"]);
     exit();
 }
+
+$chatUserId = $chatUserId['id'];
 
 // Fetch messages between the two users
 try {
     $stmt = $pdo->prepare("
         SELECT sender, recipient, text, timestamp
         FROM messages
-        WHERE (sender = :username AND recipient = :chatUser)
-           OR (sender = :chatUser AND recipient = :username)
+        WHERE (sender = :userId AND recipient = :chatUserId)
+           OR (sender = :chatUserId AND recipient = :userId)
         ORDER BY timestamp ASC
     ");
     $stmt->execute([
-        ':username' => $username,
-        ':chatUser' => $chatUser
+        ':userId' => $userId,
+        ':chatUserId' => $chatUserId
     ]);
 
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $chatHTML = "";
     foreach ($messages as $msg) {
-        $isSender = ($msg['sender'] === $username);
+        $isSender = ($msg['sender'] === $userId);
         $chatHTML .= "<div class='message " . ($isSender ? "sent" : "received") . "'>";
         $chatHTML .= "<p>" . htmlspecialchars($msg['text']) . "</p>";
-        $chatHTML .= "<span>" . date('Y-m-d H:i:s', strtotime($msg['timestamp'])) . "</span>";  // Format timestamp
+        $chatHTML .= "<span>" . $msg['timestamp'] . "</span>";
         $chatHTML .= "</div>";
     }
 
