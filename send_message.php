@@ -2,8 +2,8 @@
 session_start();
 require 'db_connect.php';
 
-// Ensure user is logged in
-if (!isset($_SESSION['username']) || !isset($_POST['to']) || !isset($_POST['message'])) {
+// Ensure user is logged in and inputs are valid
+if (!isset($_SESSION['username'], $_POST['to'], $_POST['message'])) {
     echo json_encode(["error" => "Unauthorized access"]);
     exit();
 }
@@ -21,19 +21,17 @@ if ($to === $username || $message === '') {
 // Ensure recipient exists
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :to");
 $stmt->execute([':to' => $to]);
-
 if ($stmt->rowCount() === 0) {
     echo json_encode(["error" => "Recipient not found"]);
     exit();
 }
 
+// Insert the message into DB
 try {
-    // Save the message
-    $stmt = $pdo->prepare(
-        "INSERT INTO messages (sender, recipient, text, aes_key, iv) 
-        VALUES (:from, :to, :text, '', '')"
-    );
-
+    $stmt = $pdo->prepare("
+        INSERT INTO messages (sender, recipient, text)
+        VALUES (:from, :to, :text)
+    ");
     $stmt->execute([
         ':from' => $username,
         ':to' => $to,
@@ -41,6 +39,7 @@ try {
     ]);
 
     echo json_encode(["success" => "Message sent!"]);
+
 } catch (PDOException $e) {
     error_log("❌ Send message error: " . $e->getMessage());
     echo json_encode(["error" => "Failed to send message"]);
