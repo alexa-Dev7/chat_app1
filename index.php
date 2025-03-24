@@ -2,10 +2,10 @@
 session_start();
 
 // Database connection setup
-$host = "dpg-cvfu9ennoe9s73bkltpg-a";
-$dbname = "pager_1n3k";
-$user = "pager_1n3k_user";
-$password = "XyB7njpb4E01Nl26iWWLJ30xMCDrlHux";
+$host = "dpg-cvgd5atrie7s73bog17g-a";
+$dbname = "pager_sivs";
+$user = "pager_sivs_user";
+$password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 try {
     $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
