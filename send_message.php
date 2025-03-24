@@ -1,39 +1,30 @@
 <?php
 session_start();
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['error' => 'Not logged in']);
-    exit();
+    die(json_encode(["error" => "Unauthorized access"]));
 }
 
-$from = $_SESSION['username'];
+$username = $_SESSION['username'];
 $to = $_POST['to'] ?? '';
 $message = trim($_POST['message'] ?? '');
 
-if (empty($to) || empty($message)) {
-    echo json_encode(['error' => 'Empty message or recipient']);
-    exit();
+if (!$to || !$message) {
+    die(json_encode(["error" => "Recipient and message are required"]));
 }
 
-// Path to the messages file
-$filePath = 'chats/messages.json';
+// Load the existing messages
+$messagesFile = "chats/messages.json";
+$messages = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
 
-// Ensure file exists
-if (!file_exists($filePath)) {
-    file_put_contents($filePath, json_encode([]));
-}
-
-// Load existing messages
-$messages = json_decode(file_get_contents($filePath), true);
-
-// Add new message to the file
+// Save new message
 $newMessage = [
-    'sender' => $from,
-    'recipient' => $to,
-    'text' => htmlspecialchars($message),
-    'time' => date('H:i:s')
+    "sender" => $username,
+    "recipient" => $to,
+    "text" => $message,
+    "time" => date("H:i")
 ];
-
 $messages[] = $newMessage;
-file_put_contents($filePath, json_encode($messages, JSON_PRETTY_PRINT));
 
-echo json_encode(['success' => true]);
+file_put_contents($messagesFile, json_encode($messages, JSON_PRETTY_PRINT));
+echo json_encode(["success" => true]);
+?>
