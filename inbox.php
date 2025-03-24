@@ -189,9 +189,10 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 
 </div>
 
-let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
+<script>
+    let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-// Open chat window when clicking a user
+// Open chat window when a user is clicked
 function openChat(user) {
     currentChatUser = user;
     document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -212,7 +213,9 @@ function loadChat() {
                         <span class="timestamp">${msg.time}</span>
                     </div>
                 `).join('') || "<p>No messages yet!</p>";
-                chatBody.scrollTop = chatBody.scrollHeight; // Auto-scroll to the latest message
+
+                // Auto-scroll to the latest message
+                chatBody.scrollTop = chatBody.scrollHeight;
             })
             .catch(err => console.error('Error loading chat:', err));
     }
@@ -233,21 +236,21 @@ function sendMessage(event) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Immediately append the message without waiting for loadChat()
+                // Immediately show the message without waiting for loadChat()
                 const chatBody = document.getElementById('chatBody');
                 const now = new Date();
-                const time = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+                const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
 
-                const newMsg = `
+                chatBody.innerHTML += `
                     <div class="message mine">
                         <strong><?= $username ?></strong>: ${message}
                         <span class="timestamp">${time}</span>
                     </div>
                 `;
-                chatBody.innerHTML += newMsg;
-                chatBody.scrollTop = chatBody.scrollHeight; // Scroll to latest message
-                
-                messageInput.value = ''; // Clear the input box
+
+                // Scroll to the latest message and clear input box
+                chatBody.scrollTop = chatBody.scrollHeight;
+                messageInput.value = '';
             } else {
                 console.error("Failed to send message:", data.error);
             }
@@ -256,9 +259,10 @@ function sendMessage(event) {
     }
 }
 
-// Auto-refresh chat every 3 seconds
-setInterval(loadChat, 3000);
+// Auto-refresh chat every 1 seconds to pull new messages
+setInterval(loadChat, 1000);
 
+</script>
 
 </body>
 </html>
