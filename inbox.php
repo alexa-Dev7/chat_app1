@@ -67,39 +67,46 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         loadChat();
     }
 
-    function loadChat() {
-        if (currentChatUser !== '') {
-            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const chatBody = document.getElementById('chatBody');
-                    if (data.error) {
-                        console.error("Chat Error:", data.error);
-                        chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
-                        return;
-                    }
-                    chatBody.innerHTML = data.messages;
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                })
-                .catch(err => console.error('Error loading chat:', err));
-        }
-    }
-
-    function sendMessage(event) {
-        event.preventDefault();
-        const message = document.getElementById('messageInput').value;
-        if (message.trim() !== '') {
-            fetch('send_message.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+ function loadChat() {
+    if (currentChatUser !== '') {
+        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+            .then(response => response.json())
+            .then(data => {
+                const chatBody = document.getElementById('chatBody');
+                if (data.error) {
+                    console.error("Chat Error:", data.error);
+                    chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                    return;
+                }
+                chatBody.innerHTML = data.messages;
+                chatBody.scrollTop = chatBody.scrollHeight;
             })
-            .then(() => {
-                document.getElementById('messageInput').value = '';
-                loadChat();
-            });
-        }
+            .catch(err => console.error('Fetch Error:', err));
     }
+}
+
+function sendMessage(event) {
+    event.preventDefault();
+    const message = document.getElementById('messageInput').value;
+    if (message.trim() !== '') {
+        fetch('send_message.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error("Send Error:", data.error);
+                alert("Failed to send: " + data.error);
+            }
+            document.getElementById('messageInput').value = '';
+            loadChat();
+        })
+        .catch(err => console.error('Fetch Error:', err));
+    }
+}
+
 
     setInterval(loadChat, 1000);
 </script>
