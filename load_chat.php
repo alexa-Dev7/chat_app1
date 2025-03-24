@@ -8,17 +8,27 @@ if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
 $from = $_SESSION['username'];
 $to = trim($_GET['user']);
 
-// Define the chat file path
+// Define chat file path
 $chatFile = "chats/" . (strcmp($from, $to) < 0 ? "{$from}_{$to}" : "{$to}_{$from}") . ".json";
 
-// Check if the file exists
-if (file_exists($chatFile)) {
-    $chatData = json_decode(file_get_contents($chatFile), true);
-} else {
-    $chatData = [];
+// Debug: Check if file exists and is readable
+if (!file_exists($chatFile)) {
+    echo json_encode(["error" => "Chat file not found"]);
+    exit();
+}
+if (!is_readable($chatFile)) {
+    echo json_encode(["error" => "Chat file not readable"]);
+    exit();
 }
 
-// Build chat messages as bubbles
+// Load chat data
+$chatData = json_decode(file_get_contents($chatFile), true);
+if (!is_array($chatData)) {
+    echo json_encode(["error" => "Failed to parse chat data"]);
+    exit();
+}
+
+// Build message bubbles
 $output = "";
 foreach ($chatData as $msg) {
     $isMine = ($msg['from'] === $from) ? "mine" : "theirs";
