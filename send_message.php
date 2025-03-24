@@ -14,17 +14,22 @@ if (!$to || !$message) {
     exit();
 }
 
+// Ensure file exists and is writable
 $messagesFile = "chats/messages.json";
 $messages = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
 
+// New message structure
 $newMessage = [
     "sender" => $username,
     "recipient" => $to,
     "text" => $message,
     "time" => date("H:i")
 ];
-$messages[] = $newMessage;
 
+// Add new message to the list
+$messages[] = $newMessage;
 file_put_contents($messagesFile, json_encode($messages, JSON_PRETTY_PRINT));
+
+// Return success response
 echo json_encode(["success" => true]);
 ?>
