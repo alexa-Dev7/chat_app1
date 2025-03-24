@@ -100,20 +100,23 @@ function sendMessage(event) {
         })
         .then(response => response.json())
         .then(data => {
+            console.log("📩 Response Data:", data);
             if (data.error) {
-                console.error('Send Error:', data.error);
+                console.error('❌ Send Error:', data.error);
                 alert(`Error: ${data.error}`);
             } else {
+                console.log("✅ Message sent successfully:", data.message);
                 document.getElementById('messageInput').value = '';
                 loadChat();
             }
         })
         .catch(err => {
-            console.error('Fetch Error:', err);
-            alert('Failed to send message!');
+            console.error('🚨 Fetch Error:', err);
+            alert('Failed to send message! (Network issue)');
         });
     }
 }
+
 
 
 // Refresh messages every second
