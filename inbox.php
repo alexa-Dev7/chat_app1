@@ -25,25 +25,56 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     <link rel="stylesheet" href="assets/styles.css">
     <title>Inbox | Messenger</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
+<body class="bg-gray-100">
 
 <!-- Navbar -->
-<div class="navbar">
-    <div class="navbar-left">
-        <a class="navbar-brand" href="#">Messenger</a>
+<nav class="bg-blue-500 shadow-lg">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between items-center">
+            <div class="flex space-x-7">
+                <div>
+                    <a class="flex items-center py-4 px-2 bg-blue-500" href="#">
+                        <span class="font-semibold text-white text-lg">Red Pages</span>
+                    </a>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center space-x-3">
+                <a class="py-2 px-2 font-medium text-white rounded hover:bg-blue-400 transition duration-300" href="logout.php">Log Out</a>
+            </div>
+            <div class="md:hidden flex items-center">
+                <button class="outline-none mobile-menu-button">
+                    <svg class="w-6 h-6 text-white hover:text-blue-300" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="navbar-center">
-        <input type="text" class="search-bar" placeholder="Search...">
-    </div>
-    <div class="navbar-right">
-        <a href="#" class="navbar-link">Home</a>
-        <a href="#" class="navbar-link">Profile</a>
-        <a href="logout.php" class="navbar-link">Logout</a>
-    </div>
-</div>
 
+    <!-- Mobile menu -->
+    <div class="hidden mobile-menu">
+        <ul>
+            <li><a class="block text-sm px-2 py-4 text-white bg-blue-500 font-semibold" href="#">Home</a></li>
+            <li><a class="block text-sm px-2 py-4 hover:bg-blue-400 transition duration-300" href="#">About</a></li>
+            <li><a class="block text-sm px-2 py-4 hover:bg-blue-400 transition duration-300" href="#">Contact</a></li>
+            <li><a class="block text-sm px-2 py-4 hover:bg-blue-400 transition duration-300" href="#">Blog</a></li>
+            <li><a class="block text-sm px-2 py-4 text-white hover:bg-blue-400 transition duration-300" href="logout.php">Log Out</a></li>
+        </ul>
+    </div>
+</nav>
+
+<script>
+    const btn = document.querySelector("button.mobile-menu-button");
+    const menu = document.querySelector(".mobile-menu");
+    btn.addEventListener("click", () => {
+        menu.classList.toggle("hidden");
+    });
+</script>
+
+<!-- Chat Container -->
 <div class="chat-container">
     <!-- Sidebar showing users -->
     <div class="sidebar">
