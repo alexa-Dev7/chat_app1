@@ -214,3 +214,35 @@ p a:hover {
         font-size: 16px;
     }
 }
+.chat-body {
+    height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+    background: #f1f1f1;
+    border: 1px solid #ddd;
+}
+
+.my-message {
+    text-align: right;
+    color: #fff;
+    background: #4CAF50;
+    padding: 5px 10px;
+    border-radius: 10px;
+    margin: 5px 0;
+}
+
+.their-message {
+    text-align: left;
+    color: #333;
+    background: #ddd;
+    padding: 5px 10px;
+    border-radius: 10px;
+    margin: 5px 0;
+}
+
+.timestamp {
+    font-size: 0.8em;
+    color: #777;
+    display: block;
+    margin-top: 2px;
+}
