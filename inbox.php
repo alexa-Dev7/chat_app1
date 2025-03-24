@@ -98,12 +98,23 @@ function sendMessage(event) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
         })
-        .then(() => {
-            document.getElementById('messageInput').value = '';
-            loadChat();
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                console.error('Send Error:', data.error);
+                alert(`Error: ${data.error}`);
+            } else {
+                document.getElementById('messageInput').value = '';
+                loadChat();
+            }
+        })
+        .catch(err => {
+            console.error('Fetch Error:', err);
+            alert('Failed to send message!');
         });
     }
 }
+
 
 // Refresh messages every second
 setInterval(loadChat, 1000);
