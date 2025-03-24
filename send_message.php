@@ -9,23 +9,29 @@ $from = $_SESSION['username'];
 $to = trim($_POST['to']);
 $message = trim($_POST['message']);
 
-// Prevent sending to yourself or empty messages
 if ($to === $from || $message === '') {
     echo json_encode(["error" => "Invalid message"]);
     exit();
 }
 
-// Define the chat file (sorted alphabetically for consistency)
+// Define JSON filename (sorted alphabetically)
 $chatFile = "chats/" . (strcmp($from, $to) < 0 ? "{$from}_{$to}" : "{$to}_{$from}") . ".json";
 
-// Load existing chat or create a new one
-if (file_exists($chatFile)) {
-    $chatData = json_decode(file_get_contents($chatFile), true);
-} else {
-    $chatData = [];
+// Debug: Check file path & permissions
+if (!is_writable('chats/')) {
+    die(json_encode(["error" => "Chat folder is not writable!"]));
 }
 
-// Add the new message
+// Ensure file exists
+if (!file_exists($chatFile)) {
+    file_put_contents($chatFile, json_encode([]));
+}
+
+// Load or initialize chat data
+$chatData = json_decode(file_get_contents($chatFile), true);
+if (!is_array($chatData)) $chatData = [];
+
+// Add new message
 $chatData[] = [
     "from" => $from,
     "to" => $to,
@@ -33,9 +39,9 @@ $chatData[] = [
     "timestamp" => date('Y-m-d H:i:s')
 ];
 
-// Save back to the JSON file
+// Save data back to JSON file
 if (file_put_contents($chatFile, json_encode($chatData, JSON_PRETTY_PRINT))) {
     echo json_encode(["success" => "Message sent!"]);
 } else {
-    echo json_encode(["error" => "Failed to send message"]);
+    echo json_encode(["error" => "Failed to save message"]);
 }
