@@ -12,4 +12,4 @@ if (!file_exists($filePath)) {
     file_put_contents($filePath, json_encode([]));
 }
 
-echo "Setup complete — 'chats/messages.json' is ready!";
+echo "✅ Setup complete — 'chats/messages.json' is ready!";
