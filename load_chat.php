@@ -1,33 +1,31 @@
 <?php
 session_start();
-
-// Ensure user is logged in and target user is provided
-if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
-    echo json_encode(["error" => "Unauthorized access"]);
+if (!isset($_SESSION['username'])) {
+    echo json_encode(['error' => 'Not logged in']);
     exit();
 }
 
-$username = $_SESSION['username'];
-$chatUser = trim($_GET['user']);
-$filename = 'chats/messages.json';
+$currentUser = $_SESSION['username'];
+$chatUser = $_GET['user'] ?? '';
 
-// Ensure the file exists and is readable
-if (!file_exists($filename)) {
-    echo json_encode(["error" => "No messages found"]);
+if (empty($chatUser)) {
+    echo json_encode(['error' => 'No chat user specified']);
     exit();
 }
 
-// Load and decode messages (log error if decoding fails)
-$messages = json_decode(file_get_contents($filename), true);
-if ($messages === null) {
-    echo json_encode(["error" => "Failed to load messages"]);
-    error_log("Failed to decode JSON from $filename");
+// Load messages
+$filePath = 'chats/messages.json';
+if (!file_exists($filePath)) {
+    echo json_encode(['messages' => []]);
     exit();
 }
 
-// Return the chat messages (or empty array if none exist)
-if (isset($messages[$username][$chatUser])) {
-    echo json_encode(["messages" => $messages[$username][$chatUser]]);
-} else {
-    echo json_encode(["messages" => []]);
-}
+$messages = json_decode(file_get_contents($filePath), true);
+
+// Filter for this user pair
+$chatMessages = array_filter($messages, function ($msg) use ($currentUser, $chatUser) {
+    return ($msg['sender'] === $currentUser && $msg['recipient'] === $chatUser) ||
+           ($msg['sender'] === $chatUser && $msg['recipient'] === $currentUser);
+});
+
+echo json_encode(['messages' => array_values($chatMessages)]);
