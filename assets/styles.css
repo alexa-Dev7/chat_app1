@@ -222,69 +222,37 @@ p a:hover {
     border: 1px solid #ddd;
 }
 
-.my-message {
-    text-align: right;
-    color: #fff;
-    background: #4CAF50;
-    padding: 5px 10px;
-    border-radius: 10px;
-    margin: 5px 0;
-}
-
-.their-message {
-    text-align: left;
-    color: #333;
-    background: #ddd;
-    padding: 5px 10px;
-    border-radius: 10px;
-    margin: 5px 0;
-}
-
-.timestamp {
-    font-size: 0.8em;
-    color: #777;
-    display: block;
-    margin-top: 2px;
-}
-
 .chat-body {
     max-height: 400px;
     overflow-y: auto;
+}
+
+.message {
     padding: 10px;
-    background: #f5f5f5;
-}
-
-.message-bubble {
-    padding: 10px 15px;
-    border-radius: 18px;
-    margin: 5px 0;
-    max-width: 70%;
-    word-wrap: break-word;
+    margin: 5px;
+    border-radius: 10px;
     display: inline-block;
-    box-shadow: 0 2px 3px rgba(0,0,0,0.2);
+    max-width: 70%;
 }
 
-.message-bubble.mine {
-    background-color: #4CAF50;
+.mine {
+    background-color: #4caf50;
     color: #fff;
     align-self: flex-end;
-    float: right;
-    clear: both;
+    text-align: right;
+    margin-left: auto;
 }
 
-.message-bubble.theirs {
-    background-color: #ddd;
-    color: #333;
+.theirs {
+    background-color: #e0e0e0;
+    color: #000;
     align-self: flex-start;
-    float: left;
-    clear: both;
+    text-align: left;
 }
 
-.empty-chat {
-    text-align: center;
-    color: #888;
-    margin-top: 20px;
+.timestamp {
+    display: block;
+    font-size: 0.7em;
+    opacity: 0.7;
+    margin-top: 2px;
 }
-.message { padding: 5px 10px; margin: 5px; border-radius: 10px; }
-.mine { background: #4caf50; color: #fff; text-align: right; }
-.theirs { background: #e0e0e0; color: #000; text-align: left; }
