@@ -285,3 +285,6 @@ p a:hover {
     color: #888;
     margin-top: 20px;
 }
+.message { padding: 5px 10px; margin: 5px; border-radius: 10px; }
+.mine { background: #4caf50; color: #fff; text-align: right; }
+.theirs { background: #e0e0e0; color: #000; text-align: left; }
