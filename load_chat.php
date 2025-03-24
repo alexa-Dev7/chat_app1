@@ -5,23 +5,28 @@ if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
     exit();
 }
 
-$username = $_SESSION['username'];
-$to = trim($_GET['user']);
+$loggedInUser = $_SESSION['username'];
+$chatWith = trim($_GET['user']);
 
-// Ensure chat file path is consistent
-$usersSorted = [strtolower($username), strtolower($to)];
-sort($usersSorted);
-$chatFile = "chats/" . implode("_", $usersSorted) . ".json";
+// Ensure the chat file exists in alphabetical order
+$chatFile = 'chats/' . (strcmp($loggedInUser, $chatWith) < 0 
+    ? "{$loggedInUser}_{$chatWith}.json" 
+    : "{$chatWith}_{$loggedInUser}.json");
 
-// Load messages from JSON file
-if (file_exists($chatFile)) {
-    $messages = json_decode(file_get_contents($chatFile), true);
-    $output = '';
-    foreach ($messages as $msg) {
-        $sender = $msg['sender'] === $username ? 'You' : htmlspecialchars($msg['sender']);
-        $output .= "<p><strong>$sender:</strong> " . htmlspecialchars($msg['text']) . " <small>[" . $msg['timestamp'] . "]</small></p>";
-    }
-    echo json_encode(["messages" => $output]);
-} else {
+if (!file_exists($chatFile)) {
     echo json_encode(["messages" => "<p>No messages yet!</p>"]);
+    exit();
 }
+
+// Load and format messages
+$messages = json_decode(file_get_contents($chatFile), true);
+
+$html = '';
+foreach ($messages as $msg) {
+    $isMine = ($msg['sender'] === $loggedInUser) ? 'my-message' : 'their-message';
+    $html .= "<div class='{$isMine}'><strong>{$msg['sender']}:</strong> " 
+        . htmlspecialchars($msg['text']) 
+        . " <span class='timestamp'>{$msg['timestamp']}</span></div>";
+}
+
+echo json_encode(["messages" => $html]);
