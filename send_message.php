@@ -1,9 +1,6 @@
 <?php
 session_start();
-require 'db_connect.php';
-
-// Debugging: Check session
-if (!isset($_SESSION['username'], $_POST['to'], $_POST['message'])) {
+if (!isset($_SESSION['username']) || !isset($_POST['to']) || !isset($_POST['message'])) {
     echo json_encode(["error" => "Unauthorized access"]);
     exit();
 }
@@ -18,38 +15,22 @@ if ($to === $username || $message === '') {
     exit();
 }
 
-// Ensure recipient exists in the database
-try {
-    $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :to");
-    $stmt->execute([':to' => $to]);
-    if ($stmt->rowCount() === 0) {
-        echo json_encode(["error" => "Recipient not found"]);
-        exit();
-    }
-} catch (PDOException $e) {
-    error_log("❌ SQL Error while checking recipient: " . $e->getMessage());
-    echo json_encode(["error" => "Failed to check recipient"]);
-    exit();
-}
+// Ensure chat file path is consistent
+$usersSorted = [strtolower($username), strtolower($to)];
+sort($usersSorted);
+$chatFile = "chats/" . implode("_", $usersSorted) . ".json";
 
-// Insert the message into the database
-try {
-    $stmt = $pdo->prepare("
-        INSERT INTO messages (sender, recipient, text)
-        VALUES (:from, :to, :text)
-    ");
-    $stmt->execute([
-        ':from' => $username,
-        ':to' => $to,
-        ':text' => htmlspecialchars($message)
-    ]);
+// Load existing messages
+$messages = file_exists($chatFile) ? json_decode(file_get_contents($chatFile), true) : [];
 
-    // Debugging: Log successful message sending
-    error_log("Message sent successfully from $username to $to");
+// Add the new message
+$messages[] = [
+    "sender" => $username,
+    "text" => htmlspecialchars($message),
+    "timestamp" => date("Y-m-d H:i:s")
+];
 
-    echo json_encode(["success" => "Message sent!"]);
+// Save updated messages
+file_put_contents($chatFile, json_encode($messages));
 
-} catch (PDOException $e) {
-    error_log("❌ Send message error: " . $e->getMessage());
-    echo json_encode(["error" => "Failed to send message"]);
-}
+echo json_encode(["success" => "Message sent!"]);
