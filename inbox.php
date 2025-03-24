@@ -6,16 +6,16 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-// Get the logged-in username
+// Get logged-in user
 $username = $_SESSION['username'];
 
-// Fetch users (except current user)
+// Fetch all other users
 require 'db_connect.php';
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Load last active chat (optional)
+// Remember the last chat user
 $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 ?>
 
@@ -30,7 +30,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <body>
 
 <div class="chat-container">
-    <!-- Sidebar with users -->
+    <!-- Sidebar showing users -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>All Users</h3>
@@ -60,6 +60,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
+    // Open a chat with a selected user
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -67,53 +68,53 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         loadChat();
     }
 
- function loadChat() {
-    if (currentChatUser !== '') {
-        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-            .then(response => response.json())
-            .then(data => {
-                const chatBody = document.getElementById('chatBody');
-                if (data.error) {
-                    console.error("Chat Error:", data.error);
-                    chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
-                    return;
-                }
-                chatBody.innerHTML = data.messages;
-                chatBody.scrollTop = chatBody.scrollHeight;
+    // Load messages from messages.json
+    function loadChat() {
+        if (currentChatUser !== '') {
+            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error("Chat Error:", data.error);
+                        document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                        return;
+                    }
+
+                    let messagesHTML = "";
+                    data.messages.forEach(msg => {
+                        const isMine = msg.sender === '<?= $username ?>';
+                        messagesHTML += `<div class="message ${isMine ? 'mine' : 'theirs'}">
+                                            <strong>${msg.sender}:</strong> ${msg.text}
+                                         </div>`;
+                    });
+
+                    document.getElementById('chatBody').innerHTML = messagesHTML || "<p>No messages yet!</p>";
+                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+                })
+                .catch(err => console.error('Error loading chat:', err));
+        }
+    }
+
+    // Send message without page reload
+    function sendMessage(event) {
+        event.preventDefault();
+        const message = document.getElementById('messageInput').value;
+        if (message.trim() !== '') {
+            fetch('send_message.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
             })
-            .catch(err => console.error('Fetch Error:', err));
+            .then(() => {
+                document.getElementById('messageInput').value = '';
+                loadChat();
+            });
+        }
     }
-}
 
-function sendMessage(event) {
-    event.preventDefault();
-    const message = document.getElementById('messageInput').value;
-    if (message.trim() !== '') {
-        fetch('send_message.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                console.error("Send Error:", data.error);
-                alert("Failed to send: " + data.error);
-            }
-            document.getElementById('messageInput').value = '';
-            loadChat();
-        })
-        .catch(err => console.error('Fetch Error:', err));
-    }
-}
-
-
+    // Auto-refresh chat every second
     setInterval(loadChat, 1000);
 </script>
 
-
 </body>
 </html>
-
-
-
