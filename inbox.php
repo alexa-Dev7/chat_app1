@@ -189,54 +189,76 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 
 </div>
 
-<script>
-    let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
+let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-    // Open chat window when a user is clicked
-    function openChat(user) {
-        currentChatUser = user;
-        document.getElementById('chatWith').innerText = `Chat with ${user}`;
-        document.getElementById('chatWindow').style.display = 'block';
-        loadChat();
+// Open chat window when clicking a user
+function openChat(user) {
+    currentChatUser = user;
+    document.getElementById('chatWith').innerText = `Chat with ${user}`;
+    document.getElementById('chatWindow').style.display = 'block';
+    loadChat();
+}
+
+// Load chat messages
+function loadChat() {
+    if (currentChatUser !== '') {
+        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+            .then(response => response.json())
+            .then(data => {
+                const chatBody = document.getElementById('chatBody');
+                chatBody.innerHTML = data.messages.map(msg => `
+                    <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
+                        <strong>${msg.sender}</strong>: ${msg.text}
+                        <span class="timestamp">${msg.time}</span>
+                    </div>
+                `).join('') || "<p>No messages yet!</p>";
+                chatBody.scrollTop = chatBody.scrollHeight; // Auto-scroll to the latest message
+            })
+            .catch(err => console.error('Error loading chat:', err));
     }
+}
 
-    // Load chat messages
-    function loadChat() {
-        if (currentChatUser !== '') {
-            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const chatBody = document.getElementById('chatBody');
-                    chatBody.innerHTML = data.messages.map(msg => `
-                        <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
-                            <strong>${msg.sender}</strong>: ${msg.text}
-                            <span class="timestamp">${msg.time}</span>
-                        </div>`).join('') || "<p>No messages yet!</p>";
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                })
-                .catch(err => console.error('Error loading chat:', err));
-        }
+// Send a message
+function sendMessage(event) {
+    event.preventDefault();
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+
+    if (message !== '') {
+        fetch('send_messages.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Immediately append the message without waiting for loadChat()
+                const chatBody = document.getElementById('chatBody');
+                const now = new Date();
+                const time = now.getHours() + ":" + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+
+                const newMsg = `
+                    <div class="message mine">
+                        <strong><?= $username ?></strong>: ${message}
+                        <span class="timestamp">${time}</span>
+                    </div>
+                `;
+                chatBody.innerHTML += newMsg;
+                chatBody.scrollTop = chatBody.scrollHeight; // Scroll to latest message
+                
+                messageInput.value = ''; // Clear the input box
+            } else {
+                console.error("Failed to send message:", data.error);
+            }
+        })
+        .catch(err => console.error('Error sending message:', err));
     }
+}
 
-    // Send a message
-    function sendMessage(event) {
-        event.preventDefault();
-        const message = document.getElementById('messageInput').value;
-        if (message.trim() !== '') {
-            fetch('send_messages.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-            }).then(() => {
-                document.getElementById('messageInput').value = '';
-                loadChat();
-            });
-        }
-    }
+// Auto-refresh chat every 3 seconds
+setInterval(loadChat, 3000);
 
-    // Auto-refresh chat every second
-    setInterval(loadChat, 1000);
-</script>
 
 </body>
 </html>
