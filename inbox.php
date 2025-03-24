@@ -1,20 +1,21 @@
 <?php
+// Start session
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
     exit();
 }
 
-// Get logged-in user
+// Get logged-in username
 $username = $_SESSION['username'];
 
-// Fetch all other users
+// Fetch users from PostgreSQL (excluding current user)
 require 'db_connect.php';
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Last active chat user
+// Remember the last chat user
 $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 ?>
 
@@ -22,26 +23,36 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <html lang="en">
 <head>
     <link rel="stylesheet" href="assets/styles.css">
-    <script src="https://cdn.tailwindcss.com"></script>
     <title>Inbox | Messenger</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
-<body class="bg-gray-100">
+<body>
 
 <!-- Navbar -->
 <nav class="bg-blue-500 shadow-lg">
-    <div class="max-w-6xl mx-auto px-4 flex justify-between">
-        <a class="py-4 px-2 font-semibold text-white text-lg" href="#">MyApp</a>
-        <a class="py-2 px-2 font-medium text-white hover:bg-blue-400 transition duration-300" href="logout.php">Logout</a>
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="flex justify-between">
+            <div class="flex space-x-7">
+                <a class="flex items-center py-4 px-2 bg-blue-500" href="#">
+                    <span class="font-semibold text-white text-lg">MyApp</span>
+                </a>
+            </div>
+            <div class="md:hidden flex items-center">
+                <button class="outline-none mobile-menu-button">
+                    <svg class="w-6 h-6 text-white hover:text-blue-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
 </nav>
 
-<!-- Chat container -->
 <div class="chat-container">
-    <!-- Sidebar showing users -->
+    <!-- Sidebar with users -->
     <div class="sidebar">
-        <h2>👤 <?= htmlspecialchars($username) ?></h2>
+        <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>All Users</h3>
         <div class="user-list">
             <?php foreach ($users as $user): ?>
@@ -82,17 +93,11 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
                 .then(response => response.json())
                 .then(data => {
                     const chatBody = document.getElementById('chatBody');
-                    let messagesHTML = "";
-                    data.messages.forEach(msg => {
-                        const isMine = msg.sender === '<?= $username ?>';
-                        messagesHTML += `
-                            <div class="message ${isMine ? 'mine' : 'theirs'}">
-                                <strong>${msg.sender}</strong>: ${msg.text}
-                                <span class="timestamp">${msg.time}</span>
-                            </div>`;
-                    });
-
-                    chatBody.innerHTML = messagesHTML || "<p>No messages yet!</p>";
+                    chatBody.innerHTML = data.messages.map(msg => `
+                        <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
+                            <strong>${msg.sender}</strong>: ${msg.text}
+                            <span class="timestamp">${msg.time}</span>
+                        </div>`).join('') || "<p>No messages yet!</p>";
                     chatBody.scrollTop = chatBody.scrollHeight;
                 })
                 .catch(err => console.error('Error loading chat:', err));
@@ -107,8 +112,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-            })
-            .then(() => {
+            }).then(() => {
                 document.getElementById('messageInput').value = '';
                 loadChat();
             });
