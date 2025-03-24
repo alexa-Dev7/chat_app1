@@ -1,4 +1,5 @@
 <?php
+// Start the session and ensure user is authenticated
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
@@ -6,7 +7,14 @@ if (!isset($_SESSION['username'])) {
 }
 
 $username = $_SESSION['username'];
-$users = ['Alex', 'Jamie', 'Taylor'];  // Example users
+require 'db_connect.php';
+
+// Fetch users excluding the current user
+$stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
+$stmt->execute(['username' => $username]);
+$users = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+// Remember the last chat user
 $lastChatUser = $_SESSION['last_chat_user'] ?? '';
 
 ?>
@@ -42,9 +50,9 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         <div id="chatBody" class="chat-body"></div>
 
         <!-- Message Input -->
-        <form id="chatForm">
+        <form id="chatForm" onsubmit="sendMessage(event)">
             <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
-            <button type="submit" id="sendButton">➤</button>
+            <button type="submit">➤</button>
         </form>
     </div>
 </div>
@@ -52,7 +60,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-    // Open chat window
+    // Open the chat with a user
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -60,7 +68,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         loadChat();
     }
 
-    // Load chat messages
+    // Load chat messages from the backend
     function loadChat() {
         if (currentChatUser !== '') {
             fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
@@ -68,24 +76,21 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                 .then(data => {
                     const chatBody = document.getElementById('chatBody');
                     chatBody.innerHTML = data.messages.map(msg => `
-                        <div class="message ${msg.sender === "<?= $username ?>" ? 'mine' : 'theirs'}">
+                        <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
                             <strong>${msg.sender}</strong>: ${msg.text}
                             <span class="timestamp">${msg.time}</span>
-                        </div>
-                    `).join('') || "<p>No messages yet!</p>";
+                        </div>`).join('') || "<p>No messages yet!</p>";
                     chatBody.scrollTop = chatBody.scrollHeight;
                 })
                 .catch(err => console.error('Error loading chat:', err));
         }
     }
 
-    // Send a message (Fixed)
-    document.getElementById('chatForm').addEventListener('submit', function (event) {
+    // Send a message and display it immediately
+    function sendMessage(event) {
         event.preventDefault();
-        const messageInput = document.getElementById('messageInput');
-        const message = messageInput.value.trim();
-
-        if (message !== '' && currentChatUser) {
+        const message = document.getElementById('messageInput').value.trim();
+        if (message !== '') {
             fetch('send_message.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -97,25 +102,20 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                     const chatBody = document.getElementById('chatBody');
                     const now = new Date();
                     const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-
                     chatBody.innerHTML += `
                         <div class="message mine">
                             <strong><?= $username ?></strong>: ${message}
                             <span class="timestamp">${time}</span>
                         </div>`;
+                    document.getElementById('messageInput').value = '';
                     chatBody.scrollTop = chatBody.scrollHeight;
-
-                    messageInput.value = '';
-                } else {
-                    alert("Failed to send message.");
                 }
-            })
-            .catch(err => console.error('Error sending message:', err));
+            });
         }
-    });
+    }
 
-    // Auto-refresh chat every 3 seconds
-    setInterval(loadChat, 3000);
+    // Refresh messages every second
+    setInterval(loadChat, 1000);
 </script>
 
 </body>
