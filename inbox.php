@@ -69,31 +69,35 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     }
 
     // Load messages from messages.json
-    function loadChat() {
-        if (currentChatUser !== '') {
-            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        console.error("Chat Error:", data.error);
-                        document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
-                        return;
-                    }
+  function loadChat() {
+    if (currentChatUser !== '') {
+        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+            .then(response => response.json())
+            .then(data => {
+                const chatBody = document.getElementById('chatBody');
 
-                    let messagesHTML = "";
-                    data.messages.forEach(msg => {
-                        const isMine = msg.sender === '<?= $username ?>';
-                        messagesHTML += `<div class="message ${isMine ? 'mine' : 'theirs'}">
-                                            <strong>${msg.sender}:</strong> ${msg.text}
-                                         </div>`;
-                    });
+                if (data.error) {
+                    console.error("Chat Error:", data.error);
+                    chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                    return;
+                }
 
-                    document.getElementById('chatBody').innerHTML = messagesHTML || "<p>No messages yet!</p>";
-                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
-                })
-                .catch(err => console.error('Error loading chat:', err));
-        }
+                let messagesHTML = "";
+                data.messages.forEach(msg => {
+                    const isMine = msg.sender === '<?= $username ?>';
+                    messagesHTML += `
+                        <div class="message ${isMine ? 'mine' : 'theirs'}">
+                            <strong>${msg.sender}</strong>: ${msg.text}
+                            <span class="timestamp">${msg.time}</span>
+                        </div>`;
+                });
+
+                chatBody.innerHTML = messagesHTML || "<p>No messages yet!</p>";
+                chatBody.scrollTop = chatBody.scrollHeight;
+            })
+            .catch(err => console.error('Error loading chat:', err));
     }
+}
 
     // Send message without page reload
     function sendMessage(event) {
