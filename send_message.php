@@ -5,32 +5,39 @@ if (!isset($_SESSION['username']) || !isset($_POST['to']) || !isset($_POST['mess
     exit();
 }
 
-$username = $_SESSION['username'];
-$to = trim($_POST['to']);
+$sender = $_SESSION['username'];
+$recipient = trim($_POST['to']);
 $message = trim($_POST['message']);
 
-// Prevent sending empty messages or messages to yourself
-if ($to === $username || $message === '') {
+// Prevent sending empty messages or to yourself
+if ($recipient === $sender || $message === '') {
     echo json_encode(["error" => "Invalid message"]);
     exit();
 }
 
-// Ensure chat file path is consistent
-$usersSorted = [strtolower($username), strtolower($to)];
-sort($usersSorted);
-$chatFile = "chats/" . implode("_", $usersSorted) . ".json";
+// Ensure "chats" folder exists
+if (!file_exists('chats')) {
+    mkdir('chats', 0777, true);
+}
 
-// Load existing messages
-$messages = file_exists($chatFile) ? json_decode(file_get_contents($chatFile), true) : [];
+// Generate filename in alphabetical order
+$chatFile = 'chats/' . (strcmp($sender, $recipient) < 0 
+    ? "{$sender}_{$recipient}.json" 
+    : "{$recipient}_{$sender}.json");
+
+// Load existing messages or create new array
+$messages = file_exists($chatFile) 
+    ? json_decode(file_get_contents($chatFile), true) 
+    : [];
 
 // Add the new message
 $messages[] = [
-    "sender" => $username,
-    "text" => htmlspecialchars($message),
-    "timestamp" => date("Y-m-d H:i:s")
+    'sender' => $sender,
+    'text' => htmlspecialchars($message),
+    'timestamp' => date('Y-m-d H:i:s')
 ];
 
-// Save updated messages
-file_put_contents($chatFile, json_encode($messages));
+// Save back to JSON file
+file_put_contents($chatFile, json_encode($messages, JSON_PRETTY_PRINT));
 
 echo json_encode(["success" => "Message sent!"]);
