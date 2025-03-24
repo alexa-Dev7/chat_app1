@@ -5,17 +5,10 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-// Get logged-in user
 $username = $_SESSION['username'];
-require 'db_connect.php';
-
-// Fetch users excluding the current user
-$stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
-$stmt->execute(['username' => $username]);
-$users = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-// Remember last chat user
+$users = ['Alex', 'Jamie', 'Taylor'];  // Example users
 $lastChatUser = $_SESSION['last_chat_user'] ?? '';
+
 ?>
 
 <!DOCTYPE html>
@@ -29,7 +22,6 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
 <body>
 
 <div class="chat-container">
-
     <!-- Sidebar with user list -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
@@ -50,18 +42,17 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         <div id="chatBody" class="chat-body"></div>
 
         <!-- Message Input -->
-        <form id="chatForm" onsubmit="sendMessage(event)">
+        <form id="chatForm">
             <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
-            <button type="submit">➤</button>
+            <button type="submit" id="sendButton">➤</button>
         </form>
     </div>
-
 </div>
 
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-    // Open chat window and load messages
+    // Open chat window
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -69,7 +60,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         loadChat();
     }
 
-    // Load chat messages and display instantly
+    // Load chat messages
     function loadChat() {
         if (currentChatUser !== '') {
             fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
@@ -77,23 +68,24 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                 .then(data => {
                     const chatBody = document.getElementById('chatBody');
                     chatBody.innerHTML = data.messages.map(msg => `
-                        <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
+                        <div class="message ${msg.sender === "<?= $username ?>" ? 'mine' : 'theirs'}">
                             <strong>${msg.sender}</strong>: ${msg.text}
                             <span class="timestamp">${msg.time}</span>
-                        </div>`).join('') || "<p>No messages yet!</p>";
+                        </div>
+                    `).join('') || "<p>No messages yet!</p>";
                     chatBody.scrollTop = chatBody.scrollHeight;
                 })
                 .catch(err => console.error('Error loading chat:', err));
         }
     }
 
-    // Send message and update chat immediately
-    function sendMessage(event) {
+    // Send a message (Fixed)
+    document.getElementById('chatForm').addEventListener('submit', function (event) {
         event.preventDefault();
         const messageInput = document.getElementById('messageInput');
         const message = messageInput.value.trim();
 
-        if (message !== '') {
+        if (message !== '' && currentChatUser) {
             fetch('send_message.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -111,17 +103,19 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                             <strong><?= $username ?></strong>: ${message}
                             <span class="timestamp">${time}</span>
                         </div>`;
-                    
                     chatBody.scrollTop = chatBody.scrollHeight;
+
                     messageInput.value = '';
+                } else {
+                    alert("Failed to send message.");
                 }
             })
             .catch(err => console.error('Error sending message:', err));
         }
-    }
+    });
 
-    // Auto-refresh chat every second
-    setInterval(loadChat, 1000);
+    // Auto-refresh chat every 3 seconds
+    setInterval(loadChat, 3000);
 </script>
 
 </body>
