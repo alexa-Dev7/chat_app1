@@ -11,10 +11,10 @@ if (!$chatUser) {
     die(json_encode(["error" => "Chat user not specified"]));
 }
 
+// Load messages
 $messagesFile = "chats/messages.json";
 $messages = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
 
-// Filter messages between current user and selected user
 $chatMessages = array_filter($messages, function ($msg) use ($username, $chatUser) {
     return ($msg['sender'] === $username && $msg['recipient'] === $chatUser) ||
            ($msg['sender'] === $chatUser && $msg['recipient'] === $username);
