@@ -60,7 +60,6 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
-    // Open chat window
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -68,25 +67,24 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         loadChat();
     }
 
-    // Load chat messages from JSON
     function loadChat() {
         if (currentChatUser !== '') {
             fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
                 .then(response => response.json())
                 .then(data => {
+                    const chatBody = document.getElementById('chatBody');
                     if (data.error) {
                         console.error("Chat Error:", data.error);
-                        document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                        chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
                         return;
                     }
-                    document.getElementById('chatBody').innerHTML = data.messages;
-                    document.getElementById('chatBody').scrollTop = document.getElementById('chatBody').scrollHeight;
+                    chatBody.innerHTML = data.messages;
+                    chatBody.scrollTop = chatBody.scrollHeight;
                 })
                 .catch(err => console.error('Error loading chat:', err));
         }
     }
 
-    // Send a message
     function sendMessage(event) {
         event.preventDefault();
         const message = document.getElementById('messageInput').value;
@@ -103,9 +101,12 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         }
     }
 
-    // Auto-refresh chat every second
     setInterval(loadChat, 1000);
 </script>
 
+
 </body>
 </html>
+
+
+
