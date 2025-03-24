@@ -5,28 +5,25 @@ if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
     exit();
 }
 
-$loggedInUser = $_SESSION['username'];
-$chatWith = trim($_GET['user']);
+$from = $_SESSION['username'];
+$to = trim($_GET['user']);
 
-// Ensure the chat file exists in alphabetical order
-$chatFile = 'chats/' . (strcmp($loggedInUser, $chatWith) < 0 
-    ? "{$loggedInUser}_{$chatWith}.json" 
-    : "{$chatWith}_{$loggedInUser}.json");
+// Define the chat file path
+$chatFile = "chats/" . (strcmp($from, $to) < 0 ? "{$from}_{$to}" : "{$to}_{$from}") . ".json";
 
-if (!file_exists($chatFile)) {
-    echo json_encode(["messages" => "<p>No messages yet!</p>"]);
-    exit();
+// Check if the file exists
+if (file_exists($chatFile)) {
+    $chatData = json_decode(file_get_contents($chatFile), true);
+} else {
+    $chatData = [];
 }
 
-// Load and format messages
-$messages = json_decode(file_get_contents($chatFile), true);
-
-$html = '';
-foreach ($messages as $msg) {
-    $isMine = ($msg['sender'] === $loggedInUser) ? 'my-message' : 'their-message';
-    $html .= "<div class='{$isMine}'><strong>{$msg['sender']}:</strong> " 
-        . htmlspecialchars($msg['text']) 
-        . " <span class='timestamp'>{$msg['timestamp']}</span></div>";
+// Build chat messages as bubbles
+$output = "";
+foreach ($chatData as $msg) {
+    $isMine = ($msg['from'] === $from) ? "mine" : "theirs";
+    $output .= "<div class='message-bubble $isMine'><strong>{$msg['from']}</strong>: {$msg['message']}<br><small>{$msg['timestamp']}</small></div>";
 }
 
-echo json_encode(["messages" => $html]);
+// Return messages or "No messages yet!"
+echo json_encode(["messages" => $output ?: "<p class='empty-chat'>No messages yet!</p>"]);
