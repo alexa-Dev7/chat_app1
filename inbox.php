@@ -5,6 +5,7 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
+// Get logged-in user
 $username = $_SESSION['username'];
 require 'db_connect.php';
 
@@ -13,6 +14,7 @@ $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
+// Remember last chat user
 $lastChatUser = $_SESSION['last_chat_user'] ?? '';
 ?>
 
@@ -25,6 +27,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
 </head>
 
 <body>
+
 <div class="chat-container">
 
     <!-- Sidebar with user list -->
@@ -52,11 +55,13 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
             <button type="submit">➤</button>
         </form>
     </div>
+
 </div>
 
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
+    // Open chat window and load messages
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -64,6 +69,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         loadChat();
     }
 
+    // Load chat messages and display instantly
     function loadChat() {
         if (currentChatUser !== '') {
             fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
@@ -75,16 +81,18 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                             <strong>${msg.sender}</strong>: ${msg.text}
                             <span class="timestamp">${msg.time}</span>
                         </div>`).join('') || "<p>No messages yet!</p>";
-                    chatBody.scrollTop = chatBody.scrollHeight; 
+                    chatBody.scrollTop = chatBody.scrollHeight;
                 })
                 .catch(err => console.error('Error loading chat:', err));
         }
     }
 
+    // Send message and update chat immediately
     function sendMessage(event) {
         event.preventDefault();
         const messageInput = document.getElementById('messageInput');
         const message = messageInput.value.trim();
+
         if (message !== '') {
             fetch('send_message.php', {
                 method: 'POST',
@@ -96,19 +104,23 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
                 if (data.success) {
                     const chatBody = document.getElementById('chatBody');
                     const now = new Date();
-                    const time = `${now.getHours()}:${(now.getMinutes() < 10 ? '0' : '')}${now.getMinutes()}`;
+                    const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
                     chatBody.innerHTML += `
                         <div class="message mine">
                             <strong><?= $username ?></strong>: ${message}
                             <span class="timestamp">${time}</span>
                         </div>`;
+                    
+                    chatBody.scrollTop = chatBody.scrollHeight;
                     messageInput.value = '';
-                    chatBody.scrollTop = chatBody.scrollHeight; 
                 }
-            });
+            })
+            .catch(err => console.error('Error sending message:', err));
         }
     }
 
+    // Auto-refresh chat every second
     setInterval(loadChat, 1000);
 </script>
 
