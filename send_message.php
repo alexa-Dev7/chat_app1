@@ -17,18 +17,19 @@ if (empty($to) || empty($message)) {
 // Path to the messages file
 $filePath = 'chats/messages.json';
 
-// Load existing messages (ensure file exists)
+// Ensure file exists
 if (!file_exists($filePath)) {
     file_put_contents($filePath, json_encode([]));
 }
 
+// Load existing messages
 $messages = json_decode(file_get_contents($filePath), true);
 
-// Add the new message
+// Add new message to the file
 $newMessage = [
     'sender' => $from,
     'recipient' => $to,
-    'text' => $message,
+    'text' => htmlspecialchars($message),
     'time' => date('H:i:s')
 ];
 
