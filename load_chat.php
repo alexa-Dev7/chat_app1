@@ -22,7 +22,7 @@ if (!file_exists($filePath)) {
 
 $messages = json_decode(file_get_contents($filePath), true);
 
-// Filter for this user pair
+// Filter messages for this user pair only
 $chatMessages = array_filter($messages, function ($msg) use ($currentUser, $chatUser) {
     return ($msg['sender'] === $currentUser && $msg['recipient'] === $chatUser) ||
            ($msg['sender'] === $chatUser && $msg['recipient'] === $currentUser);
