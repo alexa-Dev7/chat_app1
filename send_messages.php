@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["error" => "Unauthorized access"]);
+    echo json_encode(["error" => "Unauthorized"]);
     exit();
 }
 
@@ -23,10 +23,8 @@ $newMessage = [
     "text" => $message,
     "time" => date("H:i")
 ];
-
 $messages[] = $newMessage;
 
 file_put_contents($messagesFile, json_encode($messages, JSON_PRETTY_PRINT));
-
 echo json_encode(["success" => true]);
 ?>
