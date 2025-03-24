@@ -1,5 +1,4 @@
 <?php
-// Start the session and ensure user is authenticated
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
@@ -7,16 +6,15 @@ if (!isset($_SESSION['username'])) {
 }
 
 $username = $_SESSION['username'];
-require 'db_connect.php';
 
-// Fetch users excluding the current user
+// Fetch all other users
+require 'db_connect.php';
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Remember the last chat user
-$lastChatUser = $_SESSION['last_chat_user'] ?? '';
-
+// Navbar
+echo '<nav class="bg-blue-500 shadow-lg"><div class="max-w-6xl mx-auto px-4"><h2 class="text-white text-lg py-4">MyApp</h2></div></nav>';
 ?>
 
 <!DOCTYPE html>
@@ -30,7 +28,6 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
 <body>
 
 <div class="chat-container">
-    <!-- Sidebar with user list -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>All Users</h3>
@@ -44,12 +41,11 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
         </div>
     </div>
 
-    <!-- Chat Window -->
-    <div class="chat-window" id="chatWindow" style="display: <?= $lastChatUser ? 'block' : 'none' ?>;">
-        <h3 id="chatWith">Chat with <?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?></h3>
+    <!-- Chat window -->
+    <div class="chat-window" id="chatWindow" style="display: none;">
+        <h3 id="chatWith"></h3>
         <div id="chatBody" class="chat-body"></div>
 
-        <!-- Message Input -->
         <form id="chatForm" onsubmit="sendMessage(event)">
             <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
             <button type="submit">➤</button>
@@ -58,64 +54,59 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? '';
 </div>
 
 <script>
-    let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
+let currentChatUser = '';
 
-    // Open the chat with a user
-    function openChat(user) {
-        currentChatUser = user;
-        document.getElementById('chatWith').innerText = `Chat with ${user}`;
-        document.getElementById('chatWindow').style.display = 'block';
-        loadChat();
-    }
+function openChat(user) {
+    currentChatUser = user;
+    document.getElementById('chatWith').innerText = `Chat with ${user}`;
+    document.getElementById('chatWindow').style.display = 'block';
+    loadChat();
+}
 
-    // Load chat messages from the backend
-    function loadChat() {
-        if (currentChatUser !== '') {
-            fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const chatBody = document.getElementById('chatBody');
-                    chatBody.innerHTML = data.messages.map(msg => `
-                        <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
-                            <strong>${msg.sender}</strong>: ${msg.text}
-                            <span class="timestamp">${msg.time}</span>
-                        </div>`).join('') || "<p>No messages yet!</p>";
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                })
-                .catch(err => console.error('Error loading chat:', err));
-        }
-    }
-
-    // Send a message and display it immediately
-    function sendMessage(event) {
-        event.preventDefault();
-        const message = document.getElementById('messageInput').value.trim();
-        if (message !== '') {
-            fetch('send_message.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-            })
+// Load messages from JSON
+function loadChat() {
+    if (currentChatUser) {
+        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    const chatBody = document.getElementById('chatBody');
-                    const now = new Date();
-                    const time = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
-                    chatBody.innerHTML += `
-                        <div class="message mine">
-                            <strong><?= $username ?></strong>: ${message}
-                            <span class="timestamp">${time}</span>
-                        </div>`;
-                    document.getElementById('messageInput').value = '';
-                    chatBody.scrollTop = chatBody.scrollHeight;
-                }
-            });
-        }
-    }
+                const chatBody = document.getElementById('chatBody');
+                let messagesHTML = "";
 
-    // Refresh messages every second
-    setInterval(loadChat, 1000);
+                data.messages.forEach(msg => {
+                    const isMine = msg.sender === '<?= $username ?>';
+                    messagesHTML += `
+                        <div class="message ${isMine ? 'mine' : 'theirs'}">
+                            <strong>${msg.sender}</strong>: ${msg.text}
+                            <span class="timestamp">${msg.time}</span>
+                        </div>`;
+                });
+
+                chatBody.innerHTML = messagesHTML || "<p>No messages yet!</p>";
+                chatBody.scrollTop = chatBody.scrollHeight;
+            })
+            .catch(err => console.error('Error loading chat:', err));
+    }
+}
+
+// Send message
+function sendMessage(event) {
+    event.preventDefault();
+    const message = document.getElementById('messageInput').value.trim();
+    if (message !== '') {
+        fetch('send_message.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+        })
+        .then(() => {
+            document.getElementById('messageInput').value = '';
+            loadChat();
+        });
+    }
+}
+
+// Refresh messages every second
+setInterval(loadChat, 1000);
 </script>
 
 </body>
