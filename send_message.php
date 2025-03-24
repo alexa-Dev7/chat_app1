@@ -5,43 +5,30 @@ if (!isset($_SESSION['username']) || !isset($_POST['to']) || !isset($_POST['mess
     exit();
 }
 
-$from = $_SESSION['username'];
-$to = trim($_POST['to']);
+$username = $_SESSION['username'];
+$recipient = trim($_POST['to']);
 $message = trim($_POST['message']);
 
-if ($to === $from || $message === '') {
+// Prevent empty messages
+if ($recipient === $username || $message === '') {
     echo json_encode(["error" => "Invalid message"]);
     exit();
 }
 
-// Define JSON filename (sorted alphabetically)
-$chatFile = "chats/" . (strcmp($from, $to) < 0 ? "{$from}_{$to}" : "{$to}_{$from}") . ".json";
+// Load current messages file
+$filename = 'chats/messages.json';
+$messages = file_exists($filename) ? json_decode(file_get_contents($filename), true) : [];
 
-// Debug: Check file path & permissions
-if (!is_writable('chats/')) {
-    die(json_encode(["error" => "Chat folder is not writable!"]));
-}
+// Create a new chat entry if missing
+if (!isset($messages[$username][$recipient])) $messages[$username][$recipient] = [];
+if (!isset($messages[$recipient][$username])) $messages[$recipient][$username] = [];
 
-// Ensure file exists
-if (!file_exists($chatFile)) {
-    file_put_contents($chatFile, json_encode([]));
-}
+// Save message for both sender and recipient
+$newMessage = ['sender' => $username, 'text' => htmlspecialchars($message)];
+$messages[$username][$recipient][] = $newMessage;
+$messages[$recipient][$username][] = $newMessage;
 
-// Load or initialize chat data
-$chatData = json_decode(file_get_contents($chatFile), true);
-if (!is_array($chatData)) $chatData = [];
+// Write back to the JSON file
+file_put_contents($filename, json_encode($messages, JSON_PRETTY_PRINT));
 
-// Add new message
-$chatData[] = [
-    "from" => $from,
-    "to" => $to,
-    "message" => htmlspecialchars($message),
-    "timestamp" => date('Y-m-d H:i:s')
-];
-
-// Save data back to JSON file
-if (file_put_contents($chatFile, json_encode($chatData, JSON_PRETTY_PRINT))) {
-    echo json_encode(["success" => "Message sent!"]);
-} else {
-    echo json_encode(["error" => "Failed to save message"]);
-}
+echo json_encode(["success" => "Message sent!"]);
