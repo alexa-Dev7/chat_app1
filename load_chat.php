@@ -1,21 +1,30 @@
 <?php
 session_start();
-if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
-    echo json_encode(["error" => "Invalid request"]);
+header('Content-Type: application/json'); // Ensure JSON response
+
+if (!isset($_SESSION['username'])) {
+    echo json_encode(["error" => "Unauthorized"]);
     exit();
 }
 
-$currentUser = $_SESSION['username'];
-$chatUser = $_GET['user'];
+$username = $_SESSION['username'];
+$user = $_GET['user'] ?? '';
 
-$file = "chats/messages.json";
-if (!file_exists($file)) file_put_contents($file, json_encode([]));
+if (empty($user)) {
+    echo json_encode(["error" => "No user specified"]);
+    exit();
+}
 
-$messages = json_decode(file_get_contents($file), true);
+// Determine the correct file
+$filename = "chats/" . $username . "_" . $user . ".json";
+if (!file_exists($filename)) {
+    $filename = "chats/" . $user . "_" . $username . ".json";
+}
 
-$chatMessages = array_filter($messages, function($msg) use ($currentUser, $chatUser) {
-    return ($msg['sender'] === $currentUser && $msg['recipient'] === $chatUser) || 
-           ($msg['sender'] === $chatUser && $msg['recipient'] === $currentUser);
-});
-
-echo json_encode(["messages" => array_values($chatMessages)]);
+// Load messages or return empty array
+if (file_exists($filename)) {
+    $messages = json_decode(file_get_contents($filename), true);
+    echo json_encode(["messages" => $messages ?: []]);
+} else {
+    echo json_encode(["messages" => []]);
+}
