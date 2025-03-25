@@ -2,27 +2,34 @@
 session_start();
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['username'])) {
-    echo json_encode(["error" => "Unauthorized"]);
-    exit();
-}
+try {
+    if (!isset($_SESSION['username'])) {
+        throw new Exception('Unauthorized');
+    }
 
-$username = $_SESSION['username'];
-$user = $_GET['user'] ?? '';
+    $sender = $_SESSION['username'];
+    $recipient = htmlspecialchars($_GET['user'] ?? '');
 
-if (empty($user)) {
-    echo json_encode(["error" => "No user specified"]);
-    exit();
-}
+    if (empty($recipient)) {
+        throw new Exception('Recipient missing');
+    }
 
-$filename = "chats/" . $username . "_" . $user . ".json";
-if (!file_exists($filename)) {
-    $filename = "chats/" . $user . "_" . $username . ".json";
-}
+    $filePath = "chats/{$sender}_{$recipient}.json";
 
-if (file_exists($filename)) {
-    $messages = json_decode(file_get_contents($filename), true);
-    echo json_encode(["messages" => $messages ?: []]);
-} else {
-    echo json_encode(["messages" => []]);
+    if (!file_exists($filePath)) {
+        echo json_encode(["messages" => []]);
+        exit();
+    }
+
+    $messages = json_decode(file_get_contents($filePath), true);
+
+    if (!$messages) {
+        throw new Exception('Failed to load chat');
+    }
+
+    echo json_encode(["messages" => $messages]);
+
+} catch (Exception $e) {
+    error_log("Error loading chat: " . $e->getMessage());
+    echo json_encode(["error" => $e->getMessage()]);
 }
