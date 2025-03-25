@@ -1,37 +1,50 @@
 <?php
 session_start();
-header('Content-Type: application/json');
 
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["error" => "Unauthorized"]);
+    echo json_encode(["status" => "error", "message" => "Not logged in"]);
     exit();
 }
 
-$username = $_SESSION['username'];
-$to = $_POST['to'] ?? '';
-$message = trim($_POST['message'] ?? '');
-
-if (empty($to) || empty($message)) {
-    echo json_encode(["error" => "Recipient or message missing"]);
+if (!isset($_POST['to']) || !isset($_POST['message'])) {
+    echo json_encode(["status" => "error", "message" => "Recipient or message missing"]);
     exit();
 }
 
-$filename = "chats/" . $username . "_" . $to . ".json";
-if (!file_exists($filename)) {
-    $filename = "chats/" . $to . "_" . $username . ".json";
+$sender = $_SESSION['username'];
+$recipient = $_POST['to'];
+$message = trim($_POST['message']);
+$time = date('H:i:s');
+
+// Ensure the chats directory and file exist
+if (!is_dir('chats')) {
+    mkdir('chats', 0777, true);
+}
+$filePath = "chats/{$sender}_{$recipient}.json";
+if (!file_exists($filePath)) {
+    file_put_contents($filePath, json_encode([]));
+    chmod($filePath, 0666);
 }
 
-$messageData = [
-    "sender" => $username,
-    "text" => htmlspecialchars($message),
-    "time" => date("Y-m-d H:i:s")
-];
+try {
+    // Read existing messages
+    $messages = json_decode(file_get_contents($filePath), true);
+    if (!$messages) $messages = [];
 
-$messages = file_exists($filename) ? json_decode(file_get_contents($filename), true) : [];
-$messages[] = $messageData;
+    // Add the new message
+    $messages[] = [
+        "sender" => $sender,
+        "text" => $message,
+        "time" => $time
+    ];
 
-if (file_put_contents($filename, json_encode($messages, JSON_PRETTY_PRINT)) === false) {
-    echo json_encode(["error" => "Failed to save message — check file permissions!"]);
-} else {
-    echo json_encode(["status" => "success", "message" => "Message sent!"]);
+    // Save the updated messages
+    if (file_put_contents($filePath, json_encode($messages)) === false) {
+        throw new Exception("Failed to save message");
+    }
+
+    echo json_encode(["status" => "success", "message" => "Message sent"]);
+} catch (Exception $e) {
+    http_response_code(500); // Set server error status
+    echo json_encode(["status" => "error", "message" => $e->getMessage()]);
 }
