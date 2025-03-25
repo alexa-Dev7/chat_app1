@@ -1,40 +1,42 @@
 <?php
 session_start();
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['error' => 'User not logged in']);
+    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
     exit();
 }
 
-$username = $_SESSION['username'];
-$recipient = $_POST['to'] ?? null;
-$message = $_POST['message'] ?? null;
-
-if (!$recipient || !$message) {
-    echo json_encode(['error' => 'Recipient or message missing']);
+if (!isset($_POST['to']) || !isset($_POST['message'])) {
+    echo json_encode(["status" => "error", "message" => "Recipient or message missing"]);
     exit();
 }
 
-$chatFile = "chats/messages.json";
+$sender = $_SESSION['username'];
+$recipient = $_POST['to'];
+$message = trim($_POST['message']);
 
-// Ensure file exists
-if (!file_exists($chatFile)) {
-    file_put_contents($chatFile, json_encode([]));
+if ($message === "") {
+    echo json_encode(["status" => "error", "message" => "Message cannot be empty"]);
+    exit();
 }
+
+// Ensure chats folder and file exist
+if (!file_exists('chats')) mkdir('chats');
+$file = "chats/messages.json";
+if (!file_exists($file)) file_put_contents($file, json_encode([]));
 
 // Load existing messages
-$chats = json_decode(file_get_contents($chatFile), true);
+$messages = json_decode(file_get_contents($file), true);
 
-// Add new message
-$chats[] = [
-    'sender' => $username,
-    'recipient' => $recipient,
-    'text' => $message,
-    'time' => date('H:i:s')
+$messages[] = [
+    "sender" => $sender,
+    "recipient" => $recipient,
+    "text" => $message,
+    "time" => date('Y-m-d H:i:s')
 ];
 
-// Save back to file
-if (file_put_contents($chatFile, json_encode($chats, JSON_PRETTY_PRINT))) {
-    echo json_encode(['success' => true]);
+// Save messages back to file
+if (file_put_contents($file, json_encode($messages, JSON_PRETTY_PRINT))) {
+    echo json_encode(["status" => "success", "message" => "Message sent"]);
 } else {
-    echo json_encode(['error' => 'Failed to save message']);
+    echo json_encode(["status" => "error", "message" => "Failed to save message"]);
 }
