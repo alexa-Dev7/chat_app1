@@ -1,42 +1,48 @@
 <?php
-error_reporting(0);
-ini_set('display_errors', 0);
-header('Content-Type: application/json');
-
 session_start();
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'error' => 'Unauthorized']);
+    echo json_encode(["error" => "Unauthorized"]);
     exit();
 }
 
 $username = $_SESSION['username'];
-$to = $_POST['to'] ?? '';
+$recipient = $_POST['to'] ?? '';
 $message = trim($_POST['message'] ?? '');
 
-if (!$to || !$message) {
-    echo json_encode(['status' => 'error', 'error' => 'Invalid input']);
+if (empty($recipient) || empty($message)) {
+    echo json_encode(["error" => "Recipient or message missing"]);
     exit();
 }
 
-$filename = "chats/messages.json";
+// Define file path
+$file = __DIR__ . '/chats/messages.json';
 
-// Ensure file exists
-if (!file_exists($filename)) file_put_contents($filename, json_encode([]));
+// Read existing messages
+if (!file_exists($file)) {
+    file_put_contents($file, json_encode([]));
+}
 
-// Read messages file
-$chats = json_decode(file_get_contents($filename), true);
+$messages = json_decode(file_get_contents($file), true);
 
-// Append new message
-$chats[] = [
+if ($messages === null) {
+    echo json_encode(["error" => "Failed to read message file"]);
+    exit();
+}
+
+// Add the new message
+$newMessage = [
     "sender" => $username,
-    "recipient" => $to,
+    "recipient" => $recipient,
     "text" => $message,
-    "time" => date("H:i")
+    "time" => date('H:i:s')
 ];
 
-// Save messages back to file
-if (file_put_contents($filename, json_encode($chats, JSON_PRETTY_PRINT))) {
-    echo json_encode(['status' => 'success']);
-} else {
-    echo json_encode(['status' => 'error', 'error' => 'Failed to save message']);
+$messages[] = $newMessage;
+
+// Save back to file
+if (file_put_contents($file, json_encode($messages, JSON_PRETTY_PRINT)) === false) {
+    echo json_encode(["error" => "Failed to save message"]);
+    exit();
 }
+
+echo json_encode(["success" => "Message sent"]);
