@@ -105,31 +105,63 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     }
 
     // Send message without page reload
-    function sendMessage(event) {
-        event.preventDefault();
-        const message = document.getElementById('messageInput').value;
-        if (message.trim() !== '') {
-            fetch('send_message.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error("Failed to send message:", data.error);
-                    alert(`Error: ${data.error}`);
-                } else {
-                    document.getElementById('messageInput').value = '';
-                    loadChat();
-                }
-            })
-            .catch(err => {
-                console.error('Error sending message:', err.message);
-                alert('Failed to send message. Please try again.');
-            });
-        }
+   function sendMessage(event) {
+    event.preventDefault();
+    const message = document.getElementById('messageInput').value.trim();
+
+    if (message !== '') {
+        fetch('send_message.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Server error');
+
+            // Parse only valid JSON
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === "success") {
+                document.getElementById('messageInput').value = '';
+                loadChat();
+            } else {
+                console.error('Failed to send message:', data.message);
+                alert(`❗ Error: ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error sending message:', error);
+            alert(`⚠️ Error: ${error.message}`);
+        });
     }
+}
+
+// Ensure loadChat handles unauthorized error
+function loadChat() {
+    fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load chat');
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === "error" && data.message === "Unauthorized") {
+                alert('Session expired. Please log in again.');
+                window.location.href = 'index.php';
+            } else {
+                const chatBody = document.getElementById('chatBody');
+                let messagesHTML = data.messages.map(msg => 
+                    `<div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
+                        <strong>${msg.sender}</strong>: ${msg.text}
+                        <span class="timestamp">${msg.time}</span>
+                    </div>`).join('');
+                
+                chatBody.innerHTML = messagesHTML || "<p>No messages yet!</p>";
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        })
+        .catch(err => console.error('Chat Error:', err));
+}
 
     // Auto-refresh chat every second
     setInterval(loadChat, 1000);
