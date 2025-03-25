@@ -1,4 +1,8 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+header('Content-Type: application/json');
+
 session_start();
 if (!isset($_SESSION['username'])) {
     echo json_encode(['error' => 'Unauthorized']);
@@ -10,6 +14,7 @@ $to = $_GET['user'] ?? '';
 
 $filename = "chats/messages.json";
 
+// Ensure file exists
 if (!file_exists($filename)) {
     echo json_encode(['messages' => []]);
     exit();
@@ -17,6 +22,7 @@ if (!file_exists($filename)) {
 
 $chats = json_decode(file_get_contents($filename), true);
 
+// Filter messages between these two users
 $filteredMessages = array_filter($chats, fn($msg) =>
     ($msg['sender'] === $username && $msg['recipient'] === $to) ||
     ($msg['sender'] === $to && $msg['recipient'] === $username)
