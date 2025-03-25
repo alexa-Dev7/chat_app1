@@ -1,31 +1,21 @@
 <?php
 session_start();
-if (!isset($_SESSION['username'])) {
-    echo json_encode(['error' => 'User not logged in']);
+if (!isset($_SESSION['username']) || !isset($_GET['user'])) {
+    echo json_encode(["error" => "Invalid request"]);
     exit();
 }
 
-$username = $_SESSION['username'];
-$chatUser = $_GET['user'] ?? null;
+$currentUser = $_SESSION['username'];
+$chatUser = $_GET['user'];
 
-if (!$chatUser) {
-    echo json_encode(['error' => 'No user selected']);
-    exit();
-}
+$file = "chats/messages.json";
+if (!file_exists($file)) file_put_contents($file, json_encode([]));
 
-$chatFile = "chats/messages.json";
+$messages = json_decode(file_get_contents($file), true);
 
-if (!file_exists($chatFile)) {
-    echo json_encode(['messages' => []]);
-    exit();
-}
-
-// Load chat history
-$chats = json_decode(file_get_contents($chatFile), true);
-
-$filteredChats = array_filter($chats, function ($chat) use ($username, $chatUser) {
-    return ($chat['sender'] === $username && $chat['recipient'] === $chatUser) ||
-           ($chat['sender'] === $chatUser && $chat['recipient'] === $username);
+$chatMessages = array_filter($messages, function($msg) use ($currentUser, $chatUser) {
+    return ($msg['sender'] === $currentUser && $msg['recipient'] === $chatUser) || 
+           ($msg['sender'] === $chatUser && $msg['recipient'] === $currentUser);
 });
 
-echo json_encode(['messages' => array_values($filteredChats)]);
+echo json_encode(["messages" => array_values($chatMessages)]);
