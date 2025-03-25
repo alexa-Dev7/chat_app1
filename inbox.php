@@ -1,17 +1,20 @@
 <?php
+// Start session
 session_start();
 if (!isset($_SESSION['username'])) {
     header("Location: index.php");
     exit();
 }
 
-require 'db_connect.php';
 $username = $_SESSION['username'];
 
+// Fetch users from DB
+require 'db_connect.php';
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
+// Remember last chat user
 $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 ?>
 
@@ -25,20 +28,10 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 
 <body>
 
-<nav class="bg-blue-500 shadow-lg">
-    <div class="max-w-6xl mx-auto px-4">
-        <div class="flex justify-between">
-            <a class="flex items-center py-4 px-2 bg-blue-500" href="#">
-                <span class="font-semibold text-white text-lg">MyApp</span>
-            </a>
-            <a class="py-2 px-2 font-medium text-white rounded hover:bg-blue-400 transition duration-300" href="logout.php">Logout</a>
-        </div>
-    </div>
-</nav>
-
 <div class="chat-container">
+    <!-- Sidebar -->
     <div class="sidebar">
-        <h2>👤 <?= htmlspecialchars($username) ?></h2>
+        <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>All Users</h3>
         <div class="user-list">
             <?php foreach ($users as $user): ?>
@@ -50,10 +43,12 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         </div>
     </div>
 
+    <!-- Chat window -->
     <div class="chat-window" id="chatWindow" style="display: <?= $lastChatUser ? 'block' : 'none' ?>;">
         <h3 id="chatWith">Chat with <?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?></h3>
         <div id="chatBody" class="chat-body"></div>
 
+        <!-- Message Input -->
         <form id="chatForm" onsubmit="sendMessage(event)">
             <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
             <button type="submit">➤</button>
@@ -64,6 +59,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
 <script>
     let currentChatUser = '<?= $lastChatUser ? htmlspecialchars($lastChatUser) : '' ?>';
 
+    // Open a chat with a user
     function openChat(user) {
         currentChatUser = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
@@ -71,6 +67,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         loadChat();
     }
 
+    // Load chat messages
     function loadChat() {
         if (currentChatUser !== '') {
             fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
@@ -79,30 +76,28 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
                     const chatBody = document.getElementById('chatBody');
 
                     if (data.error) {
-                        console.error("Chat Error:", data.error);
                         chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
                         return;
                     }
 
-                    let messagesHTML = data.messages.length 
-                        ? data.messages.map(msg => `
-                            <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
-                                <strong>${msg.sender}</strong>: ${msg.text}
-                                <span class="timestamp">${msg.time}</span>
-                            </div>
-                        `).join('') : "<p>No messages yet!</p>";
+                    let messagesHTML = data.messages.map(msg => `
+                        <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
+                            <strong>${msg.sender}</strong>: ${msg.text}
+                            <span class="timestamp">${msg.time}</span>
+                        </div>`).join('');
 
-                    chatBody.innerHTML = messagesHTML;
+                    chatBody.innerHTML = messagesHTML || "<p>No messages yet!</p>";
                     chatBody.scrollTop = chatBody.scrollHeight;
                 })
                 .catch(err => console.error('Error loading chat:', err));
         }
     }
 
+    // Send message
     function sendMessage(event) {
         event.preventDefault();
-        const message = document.getElementById('messageInput').value.trim();
-        if (message !== '') {
+        const message = document.getElementById('messageInput').value;
+        if (message.trim() !== '') {
             fetch('send_message.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -110,17 +105,18 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
             })
             .then(response => response.json())
             .then(data => {
-                if (data.error) {
-                    alert(`Failed to send message: ${data.error}`);
-                } else {
+                if (data.success) {
                     document.getElementById('messageInput').value = '';
                     loadChat();
+                } else {
+                    alert(`Failed to send: ${data.error}`);
                 }
             })
-            .catch(err => console.error('Unexpected error:', err));
+            .catch(err => console.error('Error sending message:', err));
         }
     }
 
+    // Refresh chat every second
     setInterval(loadChat, 1000);
 </script>
 
