@@ -17,9 +17,19 @@ if (!$to || !$message) {
 }
 
 $messagesFile = "chats/messages.json";
-if (!file_exists($messagesFile)) file_put_contents($messagesFile, json_encode([]));
+
+// Debug: Check if file exists & writable
+if (!file_exists($messagesFile)) {
+    file_put_contents($messagesFile, json_encode([]));
+}
+if (!is_writable($messagesFile)) {
+    echo json_encode(["error" => "messages.json is not writable"]);
+    exit();
+}
 
 $messages = json_decode(file_get_contents($messagesFile), true);
+if (!is_array($messages)) $messages = []; // Fix corrupt file issues
+
 $newMessage = [
     "sender" => $username,
     "recipient" => $to,
@@ -28,6 +38,7 @@ $newMessage = [
 ];
 $messages[] = $newMessage;
 
+// Debug: Check if file saving works
 if (file_put_contents($messagesFile, json_encode($messages, JSON_PRETTY_PRINT))) {
     echo json_encode(["success" => true, "message" => $newMessage]);
 } else {
