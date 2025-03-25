@@ -106,28 +106,29 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     }
 
     // Send message without page reload
-    function sendMessage(event) {
-        event.preventDefault();
-        const message = document.getElementById('messageInput').value;
-        if (message.trim() !== '') {
-            fetch('send_message.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    console.error("Failed to send message:", data.error);
-                    alert(`Error: ${data.error}`);
-                } else {
-                    document.getElementById('messageInput').value = '';
-                    loadChat();
-                }
-            })
-            .catch(err => console.error('Error sending message:', err.message));
-        }
+function sendMessage(event) {
+    event.preventDefault();
+    const message = document.getElementById('messageInput').value.trim();
+    if (message !== '') {
+        fetch('send_message.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                document.getElementById('messageInput').value = '';
+                loadChat();
+            } else {
+                console.error('Failed to send message:', data.message);
+                alert(`❗ Error: ${data.message}`);
+            }
+        })
+        .catch(error => console.error('Error sending message:', error));
     }
+}
+
 
     // Auto-refresh chat every second
     setInterval(loadChat, 1000);
