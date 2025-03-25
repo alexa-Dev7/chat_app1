@@ -105,7 +105,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
     }
 
     // Send message without page reload
-   function sendMessage(event) {
+function sendMessage(event) {
     event.preventDefault();
     const message = document.getElementById('messageInput').value.trim();
 
@@ -118,8 +118,7 @@ $lastChatUser = $_SESSION['last_chat_user'] ?? null;
         .then(response => {
             if (!response.ok) throw new Error('Server error');
 
-            // Parse only valid JSON
-            return response.json();
+            return response.json();  // Ensure response is valid JSON
         })
         .then(data => {
             if (data.status === "success") {
