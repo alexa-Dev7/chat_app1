@@ -1,4 +1,8 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+header('Content-Type: application/json');
+
 session_start();
 if (!isset($_SESSION['username'])) {
     echo json_encode(['status' => 'error', 'error' => 'Unauthorized']);
@@ -16,10 +20,13 @@ if (!$to || !$message) {
 
 $filename = "chats/messages.json";
 
+// Ensure file exists
 if (!file_exists($filename)) file_put_contents($filename, json_encode([]));
 
+// Read messages file
 $chats = json_decode(file_get_contents($filename), true);
 
+// Append new message
 $chats[] = [
     "sender" => $username,
     "recipient" => $to,
@@ -27,6 +34,7 @@ $chats[] = [
     "time" => date("H:i")
 ];
 
+// Save messages back to file
 if (file_put_contents($filename, json_encode($chats, JSON_PRETTY_PRINT))) {
     echo json_encode(['status' => 'success']);
 } else {
