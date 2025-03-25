@@ -1,27 +1,25 @@
 <?php
 session_start();
-header('Content-Type: application/json');
-
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["error" => "Unauthorized"]);
+    echo json_encode(['error' => 'Unauthorized']);
     exit();
 }
 
 $username = $_SESSION['username'];
-$chatWith = $_GET['user'] ?? '';
+$to = $_GET['user'] ?? '';
 
-if (!$chatWith) {
-    echo json_encode(["error" => "No user selected"]);
+$filename = "chats/messages.json";
+
+if (!file_exists($filename)) {
+    echo json_encode(['messages' => []]);
     exit();
 }
 
-$messagesFile = "chats/messages.json";
-if (!file_exists($messagesFile)) file_put_contents($messagesFile, json_encode([]));
+$chats = json_decode(file_get_contents($filename), true);
 
-$messages = json_decode(file_get_contents($messagesFile), true);
-$filteredMessages = array_filter($messages, function ($msg) use ($username, $chatWith) {
-    return ($msg['sender'] === $username && $msg['recipient'] === $chatWith) ||
-           ($msg['sender'] === $chatWith && $msg['recipient'] === $username);
-});
+$filteredMessages = array_filter($chats, fn($msg) =>
+    ($msg['sender'] === $username && $msg['recipient'] === $to) ||
+    ($msg['sender'] === $to && $msg['recipient'] === $username)
+);
 
-echo json_encode(["messages" => array_values($filteredMessages)]);
+echo json_encode(['messages' => array_values($filteredMessages)]);
