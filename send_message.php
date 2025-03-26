@@ -1,55 +1,64 @@
 <?php
-// Ensure proper content type for JSON response
-header('Content-Type: application/json');
+header('Content-Type: application/json'); // Ensure the response is JSON
+session_start(); // Start session
 
-// Start session
-session_start();
-
-// Ensure user is logged in
+// Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
     echo json_encode(['status' => 'error', 'message' => 'User not logged in.']);
     exit();
 }
 
-// Get the logged-in user's username
-$username = $_SESSION['username'];
-
-// Check if 'to' and 'message' are set
+// Check if the required parameters are provided
 if (!isset($_POST['to']) || !isset($_POST['message'])) {
     echo json_encode(['status' => 'error', 'message' => 'Missing recipient or message.']);
     exit();
 }
 
-$to = $_POST['to'];
-$message = $_POST['message'];
+$from = $_SESSION['username']; // The logged-in user (sender)
+$to = $_POST['to']; // The recipient user
+$message = trim($_POST['message']); // The message content
 
-// Path to the JSON file
-$messagesFile = 'chats/messages.json';
+// Validate the message content
+if (empty($message)) {
+    echo json_encode(['status' => 'error', 'message' => 'Message cannot be empty.']);
+    exit();
+}
 
-// Read the existing messages
-if (file_exists($messagesFile)) {
-    $messagesData = json_decode(file_get_contents($messagesFile), true);
-    if ($messagesData === null) {
-        echo json_encode(['status' => 'error', 'message' => 'Failed to decode existing messages.']);
-        exit();
-    }
+// Path to the JSON file where messages are stored
+$messageFile = 'chats/messages.json';
+
+// Fetch existing messages (if any)
+if (file_exists($messageFile)) {
+    $messagesData = json_decode(file_get_contents($messageFile), true);
 } else {
-    // Initialize an empty array if the file doesn't exist
     $messagesData = [];
 }
 
-// Add the new message to the messages array
-$messagesData[] = [
-    'sender' => $username,
+// Create a unique chat key for the conversation
+$chatKey = $from < $to ? $from . '-' . $to : $to . '-' . $from; // Lexicographical order to avoid duplicates
+
+// Initialize the chat if not already present
+if (!isset($messagesData[$chatKey])) {
+    $messagesData[$chatKey] = [];
+}
+
+// Add the new message to the conversation
+$newMessage = [
+    'sender' => $from,
     'receiver' => $to,
     'text' => $message,
-    'time' => date('Y-m-d H:i:s')
+    'time' => date('Y-m-d H:i:s') // Timestamp
 ];
 
-// Write the updated messages back to the JSON file
-if (file_put_contents($messagesFile, json_encode($messagesData, JSON_PRETTY_PRINT))) {
-    echo json_encode(['status' => 'success']);
+// Append the new message to the chat
+$messagesData[$chatKey][] = $newMessage;
+
+// Save the updated messages to the JSON file
+if (file_put_contents($messageFile, json_encode($messagesData, JSON_PRETTY_PRINT))) {
+    echo json_encode(['status' => 'success', 'message' => 'Message sent successfully.']);
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Failed to save the message.']);
 }
+
+exit();
 ?>
