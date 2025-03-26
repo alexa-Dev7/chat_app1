@@ -75,3 +75,14 @@ try {
     error_log("Error: " . $e->getMessage());
     echo json_encode(["status" => "error", "message" => $e->getMessage()]);
 }
+// Ensure directory and file permissions are correct
+if (!is_dir('chats')) mkdir('chats', 0777, true);
+chmod('chats', 0777);
+
+// Force the file to be writable
+if (!file_exists($filePath)) {
+    file_put_contents($filePath, json_encode([]));
+    chmod($filePath, 0666);
+} else {
+    chmod($filePath, 0666);
+}
