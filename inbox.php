@@ -14,8 +14,9 @@ if (!isset($_SESSION['username'])) {
 // Get the logged-in user
 $username = $_SESSION['username'];
 
-// Fetch all other users
-require 'db_connect.php';
+// Fetch all other users from the JSON database
+require 'db_connect.php'; // If needed, you can still use your database to get users
+
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
