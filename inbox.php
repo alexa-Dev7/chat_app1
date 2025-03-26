@@ -126,7 +126,7 @@ function sendMessage(event) {
             body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
         })
         .then(response => {
-            if (!response.ok) throw new Error('Server error');
+            if (!response.ok) throw new Error('Failed to send message');
             return response.json();
         })
         .then(data => {
@@ -144,6 +144,7 @@ function sendMessage(event) {
         });
     }
 }
+
 
 // Auto-refresh chat every 3 seconds
 setInterval(loadChat, 3000);
