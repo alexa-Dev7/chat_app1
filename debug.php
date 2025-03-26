@@ -1,11 +1,8 @@
 <?php
-// Enable error reporting
-error_reporting(E_ALL);
+// Enable error reporting for debugging
 ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// Write errors to a log file
-ini_set('log_errors', 1);
-ini_set('error_log', 'chats/error_log.txt');
-
-echo json_encode(["status" => "debug", "message" => "Debugging active!"]);
-  
+// Test the PHP environment
+echo json_encode(["status" => "success", "message" => "Debug mode works!"]);
