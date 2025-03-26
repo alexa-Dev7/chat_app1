@@ -14,9 +14,8 @@ if (!isset($_SESSION['username'])) {
 // Get the logged-in user
 $username = $_SESSION['username'];
 
-// Fetch all other users from the JSON database
-require 'db_connect.php'; // If needed, you can still use your database to get users
-
+// Fetch all other users
+require 'db_connect.php';
 $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
 $stmt->execute(['username' => $username]);
 $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -75,10 +74,10 @@ $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
             try {
                 const response = await fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`);
                 
-                // Check for proper JSON response
+                // Check if the response is valid JSON
                 const contentType = response.headers.get("content-type");
                 if (!response.ok || !contentType.includes("application/json")) {
-                    throw new Error("Failed to load chat - Invalid response.");
+                    throw new Error("Failed to load chat - Invalid response format.");
                 }
 
                 const data = await response.json();
@@ -105,45 +104,45 @@ $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             } catch (error) {
                 console.error('Error loading chat:', error);
-                document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ Unable to load chat.</p>`;
+                document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ Unable to load chat. ${error.message}</p>`;
             }
         }
     }
 
     // Send a message
-async function sendMessage(event) {
-    event.preventDefault();
-    const message = document.getElementById('messageInput').value.trim();
+    async function sendMessage(event) {
+        event.preventDefault();
+        const message = document.getElementById('messageInput').value.trim();
 
-    if (message !== '') {
-        try {
-            const response = await fetch('send_message.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-            });
+        if (message !== '') {
+            try {
+                const response = await fetch('send_message.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+                });
 
-            const contentType = response.headers.get("content-type");
-            if (!response.ok || !contentType.includes("application/json")) {
-                throw new Error("Failed to send message - Invalid response.");
+                // Ensure the response is valid JSON
+                const contentType = response.headers.get("content-type");
+                if (!response.ok || !contentType.includes("application/json")) {
+                    throw new Error("Failed to send message - Invalid response format.");
+                }
+
+                const data = await response.json();
+                
+                if (data.status === "success") {
+                    document.getElementById('messageInput').value = '';
+                    loadChat();
+                } else {
+                    console.error('Failed to send message:', data.message);
+                    alert(`❗ Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert(`⚠️ Error: ${error.message}`);
             }
-
-            const data = await response.json();
-            
-            if (data.status === "success") {
-                document.getElementById('messageInput').value = '';
-                loadChat();
-            } else {
-                console.error('Failed to send message:', data.message);
-                alert(`❗ Error: ${data.message}`);
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            alert(`⚠️ Error: ${error.message}`);
         }
     }
-}
-
 
     // Auto-refresh chat every 3 seconds
     setInterval(loadChat, 3000);
