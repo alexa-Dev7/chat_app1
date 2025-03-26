@@ -2,40 +2,43 @@
 session_start();
 header('Content-Type: application/json');
 
+// Ensure user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
+    echo json_encode(['status' => 'error', 'message' => 'Not logged in']);
     exit();
 }
 
-$from = $_SESSION['username'];
-$to = $_POST['to'] ?? null;
-$message = trim($_POST['message'] ?? '');
+$username = $_SESSION['username'];
 
-if (!$to || !$message) {
-    echo json_encode(["status" => "error", "message" => "Recipient or message missing"]);
-    exit();
+if (isset($_POST['to'], $_POST['message'])) {
+    $to = trim($_POST['to']);
+    $message = trim($_POST['message']);
+
+    // Sanitize input
+    $message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+
+    // Validate input
+    if (empty($message)) {
+        echo json_encode(['status' => 'error', 'message' => 'Message cannot be empty']);
+        exit();
+    }
+
+    // Save message to database (example query)
+    require 'db_connect.php';
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO messages (sender, receiver, message, timestamp) VALUES (:sender, :receiver, :message, NOW())");
+        $stmt->execute([
+            'sender' => $username,
+            'receiver' => $to,
+            'message' => $message
+        ]);
+
+        echo json_encode(['status' => 'success']);
+    } catch (PDOException $e) {
+        echo json_encode(['status' => 'error', 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid request']);
 }
-
-// Set file path
-$filename = "chats/{$from}_{$to}.json";
-if (!file_exists($filename)) $filename = "chats/{$to}_{$from}.json";
-
-$messageData = [
-    "sender" => $from,
-    "text" => $message,
-    "time" => date('H:i:s')
-];
-
-// Ensure directory exists and is writable
-if (!is_dir('chats')) mkdir('chats', 0777, true);
-
-// Save message
-$messages = file_exists($filename) ? json_decode(file_get_contents($filename), true) : [];
-$messages[] = $messageData;
-
-if (file_put_contents($filename, json_encode($messages, JSON_PRETTY_PRINT)) === false) {
-    echo json_encode(["status" => "error", "message" => "Failed to save message"]);
-    exit();
-}
-
-echo json_encode(["status" => "success", "message" => "Message sent!"]);
+?>
