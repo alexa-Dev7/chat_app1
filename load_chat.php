@@ -1,6 +1,18 @@
 <?php
 session_start();
 header('Content-Type: application/json');
+// Force JSON response and error handling
+header('Content-Type: application/json');
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Catch any fatal error or warning as JSON
+set_error_handler(function($severity, $message, $file, $line) {
+    http_response_code(500);
+    echo json_encode(["status" => "error", "message" => "Server error: $message"]);
+    exit;
+});
 
 try {
     if (!isset($_SESSION['username'])) {
