@@ -68,65 +68,80 @@ $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
         loadChat();
     }
 
-    
-  // Load messages
-function loadChat() {
-    if (currentChatUser !== '') {
-        fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`)
-            .then(response => {
-                if (!response.ok) throw new Error('Server error');
-                return response.json();
-            })
-            .then(data => {
+    // Load messages from JSON file
+    async function loadChat() {
+        if (currentChatUser !== '') {
+            try {
+                const response = await fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`);
+                
+                // Check for proper JSON response
+                const contentType = response.headers.get("content-type");
+                if (!response.ok || !contentType.includes("application/json")) {
+                    throw new Error("Failed to load chat - Invalid response.");
+                }
+
+                const data = await response.json();
                 const chatBody = document.getElementById('chatBody');
+
                 if (data.error) {
+                    console.error("Chat Error:", data.error);
                     chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
                     return;
                 }
 
-                let messagesHTML = data.messages.map(msg => `
-                    <div class="message ${msg.sender === '<?= $username ?>' ? 'mine' : 'theirs'}">
-                        <strong>${msg.sender}</strong>: ${msg.text}
-                        <span class="timestamp">${msg.time}</span>
-                    </div>
-                `).join('');
+                let messagesHTML = "";
+                data.messages.forEach(msg => {
+                    const isMine = msg.sender === '<?= $_SESSION['username'] ?>';
+                    messagesHTML += `
+                        <div class="message ${isMine ? 'mine' : 'theirs'}">
+                            <strong>${msg.sender}</strong>: ${msg.text}
+                            <span class="timestamp">${msg.time}</span>
+                        </div>`;
+                });
 
                 chatBody.innerHTML = messagesHTML || "<p>No messages yet!</p>";
                 chatBody.scrollTop = chatBody.scrollHeight;
-            })
-            .catch(err => {
-                console.error('Error loading chat:', err);
-                document.getElementById('chatBody').innerHTML = "<p class='error'>⚠️ An error occurred while loading the chat.</p>";
-            });
-    }
-}
 
-// Send message
-function sendMessage(event) {
-    event.preventDefault();
-    const message = document.getElementById('messageInput').value.trim();
-
-    if (message !== '') {
-        fetch('send_message.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "success") {
-                document.getElementById('messageInput').value = '';
-                loadChat();
-            } else {
-                alert(`❗ Error: ${data.message}`);
+            } catch (error) {
+                console.error('Error loading chat:', error);
+                document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ Unable to load chat.</p>`;
             }
-        })
-        .catch(error => {
-            console.error('Error sending message:', error);
-            alert('❗ Error sending message.');
-        });
+        }
     }
-}
+
+    // Send a message
+    async function sendMessage(event) {
+        event.preventDefault();
+        const message = document.getElementById('messageInput').value.trim();
+
+        if (message !== '') {
+            try {
+                const response = await fetch('send_message.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+                });
+
+                const contentType = response.headers.get("content-type");
+                if (!response.ok || !contentType.includes("application/json")) {
+                    throw new Error("Failed to send message - Invalid response.");
+                }
+
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    document.getElementById('messageInput').value = '';
+                    loadChat();
+                } else {
+                    console.error('Failed to send message:', data.message);
+                    alert(`❗ Error: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert(`⚠️ Error: ${error.message}`);
+            }
+        }
+    }
 
     // Auto-refresh chat every 3 seconds
     setInterval(loadChat, 3000);
