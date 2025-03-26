@@ -10,31 +10,39 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username'];
 
+// Check if the user parameter is provided
 if (isset($_GET['user'])) {
     $user = trim($_GET['user']);
 
-    // Fetch messages from database
-    require 'db_connect.php';
-
-    try {
-        $stmt = $pdo->prepare("SELECT sender, message, timestamp FROM messages WHERE (sender = :username AND receiver = :user) OR (sender = :user AND receiver = :username) ORDER BY timestamp DESC");
-        $stmt->execute(['username' => $username, 'user' => $user]);
-        $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Format messages for JSON response
-        $formattedMessages = [];
-        foreach ($messages as $msg) {
-            $formattedMessages[] = [
-                'sender' => $msg['sender'],
-                'text' => $msg['message'],
-                'time' => $msg['timestamp']
-            ];
-        }
-
-        echo json_encode(['messages' => $formattedMessages]);
-    } catch (PDOException $e) {
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+    // Read the messages from the JSON file
+    $messagesFile = 'chats/messages.json';
+    if (file_exists($messagesFile)) {
+        $messages = json_decode(file_get_contents($messagesFile), true);
+    } else {
+        echo json_encode(['error' => 'No messages found']);
+        exit();
     }
+
+    // Filter messages for the current user and the selected chat user
+    $filteredMessages = array_filter($messages, function ($msg) use ($username, $user) {
+        return ($msg['sender'] === $username && $msg['receiver'] === $user) ||
+               ($msg['sender'] === $user && $msg['receiver'] === $username);
+    });
+
+    // Re-index the array
+    $filteredMessages = array_values($filteredMessages);
+
+    // Format the messages for JSON response
+    $formattedMessages = [];
+    foreach ($filteredMessages as $msg) {
+        $formattedMessages[] = [
+            'sender' => $msg['sender'],
+            'text' => $msg['message'],
+            'time' => $msg['timestamp']
+        ];
+    }
+
+    echo json_encode(['messages' => $formattedMessages]);
 } else {
     echo json_encode(['error' => 'User not specified']);
 }
