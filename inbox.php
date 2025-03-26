@@ -111,38 +111,39 @@ $users = $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
     // Send a message
-    async function sendMessage(event) {
-        event.preventDefault();
-        const message = document.getElementById('messageInput').value.trim();
+async function sendMessage(event) {
+    event.preventDefault();
+    const message = document.getElementById('messageInput').value.trim();
 
-        if (message !== '') {
-            try {
-                const response = await fetch('send_message.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-                });
+    if (message !== '') {
+        try {
+            const response = await fetch('send_message.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+            });
 
-                const contentType = response.headers.get("content-type");
-                if (!response.ok || !contentType.includes("application/json")) {
-                    throw new Error("Failed to send message - Invalid response.");
-                }
-
-                const data = await response.json();
-
-                if (data.status === "success") {
-                    document.getElementById('messageInput').value = '';
-                    loadChat();
-                } else {
-                    console.error('Failed to send message:', data.message);
-                    alert(`❗ Error: ${data.message}`);
-                }
-            } catch (error) {
-                console.error('Error sending message:', error);
-                alert(`⚠️ Error: ${error.message}`);
+            const contentType = response.headers.get("content-type");
+            if (!response.ok || !contentType.includes("application/json")) {
+                throw new Error("Failed to send message - Invalid response.");
             }
+
+            const data = await response.json();
+            
+            if (data.status === "success") {
+                document.getElementById('messageInput').value = '';
+                loadChat();
+            } else {
+                console.error('Failed to send message:', data.message);
+                alert(`❗ Error: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert(`⚠️ Error: ${error.message}`);
         }
     }
+}
+
 
     // Auto-refresh chat every 3 seconds
     setInterval(loadChat, 3000);
