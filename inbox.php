@@ -1,25 +1,45 @@
 <?php
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+session_start(); // Start session
+header('Content-Type: application/json'); // Ensure the response is JSON
 
-// Start session and ensure user is logged in
-session_start();
+// Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    header("Location: index.php");
+    echo json_encode(['status' => 'error', 'message' => 'User  not logged in.']);
     exit();
 }
 
-// Get the logged-in user
-$username = $_SESSION['username'];
+// Path to the JSON file where messages are stored
+$messageFile = 'chats/messages.json';
 
-// Fetch all other users
-require 'db_connect.php';
-$stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
-$stmt->execute(['username' => $username]);
-$users = $stmt->fetchAll(PDO::FETCH_COLUMN);
-?>
+// Fetch existing messages (if any)
+if (file_exists($messageFile)) {
+    $messagesData = json_decode(file_get_contents($messageFile), true);
+    
+    // Check for JSON decoding errors
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo json_encode(['status' => 'error', 'message' => 'Failed to decode messages: ' . json_last_error_msg()]);
+        exit();
+    }
+} else {
+    $messagesData = [];
+}
+
+// Prepare the inbox data
+$inbox = [];
+foreach ($messagesData as $chatKey => $messages) {
+    $lastMessage = end($messages); // Get the last message in the conversation
+    $inbox[] = [
+        'chatKey' => $chatKey,
+        'lastMessage' => $lastMessage['text'],
+        'timestamp' => $lastMessage['time'],
+        'receiver' => $lastMessage['receiver'],
+    ];
+}
+
+// Return the inbox data as JSON
+echo json_encode(['status' => 'success', 'inbox' => $inbox]);
+exit();
+?> 
 <!DOCTYPE html>
 <html lang="en">
 <head>
