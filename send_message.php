@@ -1,10 +1,10 @@
 <?php
-header('Content-Type: application/json'); // Ensure the response is JSON
 session_start(); // Start session
+header('Content-Type: application/json'); // Ensure the response is JSON
 
 // Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'message' => 'User not logged in.']);
+    echo json_encode(['status' => 'error', 'message' => 'User  not logged in.']);
     exit();
 }
 
@@ -15,7 +15,7 @@ if (!isset($_POST['to']) || !isset($_POST['message'])) {
 }
 
 $from = $_SESSION['username']; // The logged-in user (sender)
-$to = $_POST['to']; // The recipient user
+$to = trim($_POST['to']); // The recipient user
 $message = trim($_POST['message']); // The message content
 
 // Validate the message content
@@ -30,6 +30,12 @@ $messageFile = 'chats/messages.json';
 // Fetch existing messages (if any)
 if (file_exists($messageFile)) {
     $messagesData = json_decode(file_get_contents($messageFile), true);
+    
+    // Check for JSON decoding errors
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo json_encode(['status' => 'error', 'message' => 'Failed to decode existing messages: ' . json_last_error_msg()]);
+        exit();
+    }
 } else {
     $messagesData = [];
 }
