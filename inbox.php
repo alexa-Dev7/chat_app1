@@ -26,14 +26,19 @@ if (file_exists($messageFile)) {
 
 // Prepare the inbox data
 $inbox = [];
+$username = $_SESSION['username']; // Get the logged-in username
+
 foreach ($messagesData as $chatKey => $messages) {
-    $lastMessage = end($messages); // Get the last message in the conversation
-    $inbox[] = [
-        'chatKey' => $chatKey,
-        'lastMessage' => $lastMessage['text'],
-        'timestamp' => $lastMessage['time'],
-        'receiver' => $lastMessage['receiver'],
-    ];
+    // Check if the current user is involved in the conversation
+    if (strpos($chatKey, $username) !== false) {
+        $lastMessage = end($messages); // Get the last message in the conversation
+        $inbox[] = [
+            'chatKey' => $chatKey,
+            'lastMessage' => $lastMessage['text'],
+            'timestamp' => $lastMessage['time'],
+            'receiver' => $lastMessage['receiver'],
+        ];
+    }
 }
 
 // Return the inbox data as JSON
@@ -78,11 +83,11 @@ exit();
 </div>
 
 <script>
-    let currentChatUser = '';
+    let currentChatUser  = '';
 
     // Open a chat with a selected user
     function openChat(user) {
-        currentChatUser = user;
+        currentChatUser  = user;
         document.getElementById('chatWith').innerText = `Chat with ${user}`;
         document.getElementById('chatWindow').style.display = 'block';
         loadChat();
@@ -90,9 +95,9 @@ exit();
 
     // Load messages from JSON file
     async function loadChat() {
-        if (currentChatUser !== '') {
+        if ( currentChatUser  !== '') {
             try {
-                const response = await fetch(`load_chat.php?user=${encodeURIComponent(currentChatUser)}`);
+                const response = await fetch(`load_chat.php?with=${encodeURIComponent(currentChatUser )}`);
                 
                 // Check if the response is valid JSON
                 const contentType = response.headers.get("content-type");
@@ -103,14 +108,14 @@ exit();
                 const data = await response.json();
                 const chatBody = document.getElementById('chatBody');
 
-                if (data.error) {
-                    console.error("Chat Error:", data.error);
-                    chatBody.innerHTML = `<p class='error'>⚠️ ${data.error}</p>`;
+                if (data.status === "error") {
+                    console.error("Chat Error:", data.message);
+                    chatBody.innerHTML = `<p class='error'>⚠️ ${data.message}</p>`;
                     return;
                 }
 
                 let messagesHTML = "";
-                data.messages.forEach(msg => {
+                data.chatHistory.forEach(msg => {
                     const isMine = msg.sender === '<?= $_SESSION['username'] ?>';
                     messagesHTML += `
                         <div class="message ${isMine ? 'mine' : 'theirs'}">
@@ -139,7 +144,7 @@ exit();
                 const response = await fetch('send_message.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
+                    body: `to=${encodeURIComponent(currentChatUser )}&message=${encodeURIComponent(message)}`
                 });
 
                 // Ensure the response is valid JSON
