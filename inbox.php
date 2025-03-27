@@ -1,12 +1,6 @@
 <?php 
 session_start();
 
-// Force error reporting for debugging
-header('Content-Type: text/html; charset=UTF-8');
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 // Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -15,38 +9,36 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username']; // Logged-in user
 
-// Database connection (Update credentials)
-$host = "dpg-cvgd5atrie7s73bog17g-a";
-$dbname = "pager_sivs";
-$user = "pager_sivs_user";
-$password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
+// PostgreSQL Database Credentials
+$host = "your_host"; // e.g., "localhost"
+$dbname = "your_database"; // e.g., "pager_sivs"
+$user = "your_db_user";
+$password = "your_db_password";
 
+// Connect to PostgreSQL
 try {
-    $db = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $dsn = "pgsql:host=$host;dbname=$dbname";
+    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Fetch all registered users from PostgreSQL
-$users = [];
-try {
-    $stmt = $db->query("SELECT username FROM users ORDER BY username ASC");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    error_log("Database error: " . $e->getMessage());
-}
-
-// Fetch inbox messages from JSON file
+// Path to the JSON file where messages are stored
 $messageFile = 'chats/messages.json';
-$messagesData = [];
 
+// Fetch existing messages
+$messagesData = [];
 if (file_exists($messageFile)) {
     $jsonData = file_get_contents($messageFile);
-    $messagesData = json_decode($jsonData, true) ?: [];
+    $messagesData = json_decode($jsonData, true);
+
+    // Handle JSON decoding error
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $messagesData = [];
+    }
 }
 
-// Prepare inbox
+// Prepare the inbox data
 $inbox = [];
 foreach ($messagesData as $chatKey => $messages) {
     if (strpos($chatKey, $username) !== false) {
@@ -58,6 +50,16 @@ foreach ($messagesData as $chatKey => $messages) {
             'receiver' => $lastMessage['receiver'] ?? '',
         ];
     }
+}
+
+// Fetch all registered users from PostgreSQL
+$users = [];
+try {
+    $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
+    $stmt->execute(['username' => $username]);
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("Error fetching users: " . $e->getMessage());
 }
 ?>
 
@@ -77,32 +79,23 @@ foreach ($messagesData as $chatKey => $messages) {
     <!-- Sidebar with users -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
-        
         <h3>Inbox</h3>
         <div id="inbox">
-            <?php if (!empty($inbox)): ?>
-                <?php foreach ($inbox as $chat): ?>
-                    <div class="chat-item" data-chat-key="<?= htmlspecialchars($chat['chatKey']) ?>">
-                        <strong><?= htmlspecialchars($chat['receiver']) ?></strong>: <?= htmlspecialchars($chat['lastMessage']) ?> <br>
-                        <small><?= htmlspecialchars($chat['timestamp']) ?></small>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <p>No messages yet.</p>
-            <?php endif; ?>
+            <?php foreach ($inbox as $chat): ?>
+                <div class="chat-item" data-chat-key="<?= htmlspecialchars($chat['chatKey']) ?>">
+                    <strong><?= htmlspecialchars($chat['receiver']) ?></strong>: <?= htmlspecialchars($chat['lastMessage']) ?> <br>
+                    <small><?= htmlspecialchars($chat['timestamp']) ?></small>
+                </div>
+            <?php endforeach; ?>
         </div>
 
         <h3>All Users</h3>
         <ul id="userList">
-            <?php if (!empty($users)): ?>
-                <?php foreach ($users as $user): ?>
-                    <li class="user-item" data-username="<?= htmlspecialchars($user['username']) ?>">
-                        <?= htmlspecialchars($user['username']) ?>
-                    </li>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <li>No users found.</li>
-            <?php endif; ?>
+            <?php foreach ($users as $user): ?>
+                <li class="user-item" data-username="<?= htmlspecialchars($user['username']) ?>">
+                    <?= htmlspecialchars($user['username']) ?>
+                </li>
+            <?php endforeach; ?>
         </ul>
     </div>
 
