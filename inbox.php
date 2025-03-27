@@ -1,12 +1,13 @@
 <?php
 session_start(); // Start session
-header('Content-Type: application/json'); // Ensure the response is JSON
 
 // Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'message' => 'User  not logged in.']);
+    header("Location: login.php"); // Redirect to login if not logged in
     exit();
 }
+
+$username = $_SESSION['username']; // Get the logged-in username
 
 // Path to the JSON file where messages are stored
 $messageFile = 'chats/messages.json';
@@ -17,17 +18,14 @@ if (file_exists($messageFile)) {
     
     // Check for JSON decoding errors
     if (json_last_error() !== JSON_ERROR_NONE) {
-        echo json_encode(['status' => 'error', 'message' => 'Failed to decode messages: ' . json_last_error_msg()]);
-        exit();
+        $messagesData = []; // If there's an error, initialize as empty
     }
 } else {
-    $messagesData = [];
+    $messagesData = []; // Initialize an empty array if the file does not exist
 }
 
 // Prepare the inbox data
 $inbox = [];
-$username = $_SESSION['username']; // Get the logged-in username
-
 foreach ($messagesData as $chatKey => $messages) {
     // Check if the current user is involved in the conversation
     if (strpos($chatKey, $username) !== false) {
@@ -40,17 +38,45 @@ foreach ($messagesData as $chatKey => $messages) {
         ];
     }
 }
+?>
 
-// Return the inbox data as JSON
-echo json_encode(['status' => 'success', 'inbox' => $inbox]);
-exit();
-?> 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Inbox | Messenger</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inbox | Messenger</title>
     <link rel="stylesheet" href="assets/styles.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* Add your styles here */
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .chat-container {
+            display: flex;
+        }
+        .sidebar {
+            width: 200px;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+        }
+        .chat-window {
+            flex: 1;
+            padding: 10px;
+        }
+        .chat-item {
+            cursor: pointer;
+            padding: 5px;
+            border-bottom: 1px solid #ccc;
+        }
+        .chat-item:hover {
+            background-color: #f0f0f0;
+        }
+        .message {
+            margin: 5px 0;
+        }
+    </style>
 </head>
 <body>
 
@@ -58,12 +84,12 @@ exit();
     <!-- Sidebar with users -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
-        <h3>All Users</h3>
-        <div class="user-list">
-            <?php foreach ($users as $user): ?>
-                <div class="user">
-                    <span><?= htmlspecialchars($user) ?></span>
-                    <button class="message-btn" onclick="openChat('<?= htmlspecialchars($user) ?>')">Message</button>
+        <h3>Inbox</h3>
+        <div id="inbox">
+            <?php foreach ($inbox as $chat): ?>
+                <div class="chat-item" data-chat-key="<?= htmlspecialchars($chat['chatKey']) ?>">
+                    <strong><?= htmlspecialchars($chat['receiver']) ?></strong>: <?= htmlspecialchars($chat['lastMessage']) ?> <br>
+                    <small><?= htmlspecialchars($chat['timestamp']) ?></small>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -86,92 +112,60 @@ exit();
     let currentChatUser  = '';
 
     // Open a chat with a selected user
-    function openChat(user) {
-        currentChatUser  = user;
-        document.getElementById('chatWith').innerText = `Chat with ${user}`;
+    $(document).on('click', '.chat-item', function() {
+        currentChatUser  = $(this).data('chat-key').split('-')[1]; // Get the receiver from the chat key
+        document.getElementById('chatWith').innerText = `Chat with ${currentChatUser }`;
         document.getElementById('chatWindow').style.display = 'block';
-        loadChat();
-    }
+        loadChat($(this).data('chat-key'));
+    });
 
     // Load messages from JSON file
-    async function loadChat() {
-        if ( currentChatUser  !== '') {
-            try {
-                const response = await fetch(`load_chat.php?with=${encodeURIComponent(currentChatUser )}`);
-                
-                // Check if the response is valid JSON
-                const contentType = response.headers.get("content-type");
-                if (!response.ok || !contentType.includes("application/json")) {
-                    throw new Error("Failed to load chat - Invalid response format.");
-                }
-
-                const data = await response.json();
+    async function loadChat(chatKey) {
+        try {
+            const response = await fetch(`load_chat.php?chatKey=${chatKey}`);
+            const data = await response.json();
+            if (data.status === 'success') {
                 const chatBody = document.getElementById('chatBody');
-
-                if (data.status === "error") {
-                    console.error("Chat Error:", data.message);
-                    chatBody.innerHTML = `<p class='error'>⚠️ ${data.message}</p>`;
-                    return;
-                }
-
-                let messagesHTML = "";
-                data.chatHistory.forEach(msg => {
-                    const isMine = msg.sender === '<?= $_SESSION['username'] ?>';
-                    messagesHTML += `
-                        <div class="message ${isMine ? 'mine' : 'theirs'}">
-                            <strong>${msg.sender}</strong>: ${msg.text}
-                            <span class="timestamp">${msg.time}</span>
-                        </div>`;
+                chatBody.innerHTML = ''; // Clear previous messages
+                data.messages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message';
+                    messageDiv.innerText = `${message.sender}: ${message.text} (${message.time})`;
+                    chatBody.appendChild(messageDiv);
                 });
-
-                chatBody.innerHTML = messagesHTML || "<p>No messages yet!</p>";
-                chatBody.scrollTop = chatBody.scrollHeight;
-
-            } catch (error) {
-                console.error('Error loading chat:', error);
-                document.getElementById('chatBody').innerHTML = `<p class='error'>⚠️ Unable to load chat. ${error.message}</p>`;
+            } else {
+                alert(data.message);
             }
+        } catch (error) {
+            console.error('Error loading chat:', error);
         }
     }
 
     // Send a message
     async function sendMessage(event) {
         event.preventDefault();
-        const message = document.getElementById('messageInput').value.trim();
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value;
 
-        if (message !== '') {
-            try {
-                const response = await fetch('send_message.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `to=${encodeURIComponent(currentChatUser )}&message=${encodeURIComponent(message)}`
-                });
-
-                // Ensure the response is valid JSON
-                const contentType = response.headers.get("content-type");
-                if (!response.ok || !contentType.includes("application/json")) {
-                    throw new Error("Failed to send message - Invalid response format.");
-                }
-
-                const data = await response.json();
-                
-                if (data.status === "success") {
-                    document.getElementById('messageInput').value = '';
-                    loadChat();
-                } else {
-                    console.error('Failed to send message:', data.message);
-                    alert(`❗ Error: ${data.message}`);
-                }
-            } catch (error) {
-                console.error('Error sending message:', error);
-                alert(`⚠️ Error: ${error.message}`);
+        try {
+            const response = await fetch('send_message.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `to=${currentChatUser }&message=${encodeURIComponent(message)}`,
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                messageInput.value = ''; // Clear input
+                loadChat(currentChatUser ); // Reload chat messages
+            } else {
+                alert(data.message);
             }
+        } catch (error) {
+            console.error('Error sending message:', error);
         }
     }
-
-    // Auto-refresh chat every 3 seconds
-    setInterval(loadChat, 3000);
-
 </script>
 
 </body>
