@@ -37,34 +37,31 @@ if (file_exists($messageFile)) {
         exit();
     }
 } else {
-    $messagesData = [];
+    $messagesData = []; // Initialize an empty array if the file does not exist
 }
 
-// Create a unique chat key for the conversation
-$chatKey = $from < $to ? $from . '-' . $to : $to . '-' . $from; // Lexicographical order to avoid duplicates
+// Create a unique chat key based on sender and receiver
+ $chatKey = $from . '-' . $to;
 
-// Initialize the chat if not already present
-if (!isset($messagesData[$chatKey])) {
-    $messagesData[$chatKey] = [];
-}
-
-// Add the new message to the conversation
+// Prepare the new message data
 $newMessage = [
     'sender' => $from,
     'receiver' => $to,
     'text' => $message,
-    'time' => date('Y-m-d H:i:s') // Timestamp
+    'time' => date('Y-m-d H:i:s') // Current timestamp
 ];
 
-// Append the new message to the chat
-$messagesData[$chatKey][] = $newMessage;
+// Add the new message to the appropriate chat
+if (!isset($messagesData[$chatKey])) {
+    $messagesData[$chatKey] = []; // Initialize the chat if it doesn't exist
+}
+$messagesData[$chatKey][] = $newMessage; // Append the new message
 
-// Save the updated messages to the JSON file
+// Save the updated messages back to the JSON file
 if (file_put_contents($messageFile, json_encode($messagesData, JSON_PRETTY_PRINT))) {
     echo json_encode(['status' => 'success', 'message' => 'Message sent successfully.']);
 } else {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to save the message.']);
+    echo json_encode(['status' => 'error', 'message' => 'Failed to save message.']);
 }
-
 exit();
 ?>
