@@ -1,7 +1,7 @@
 <?php 
 session_start();
 
-// Force JSON response and error handling
+// Force error reporting for debugging
 header('Content-Type: text/html; charset=UTF-8');
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -44,12 +44,18 @@ foreach ($messagesData as $chatKey => $messages) {
     }
 }
 
-// Fetch all registered users (Replace with DB query if needed)
+// Fetch all registered users from PostgreSQL
 $users = [];
-if (file_exists('users.json')) {
-    $users = json_decode(file_get_contents('users.json'), true);
-}
+try {
+    $db = new PDO("pgsql:host=your_host;dbname=your_dbname", "your_username", "your_password");
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+    $stmt = $db->query("SELECT username FROM users ORDER BY username ASC");
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    error_log("Database error: " . $e->getMessage());
+}
 ?>
 
 <!DOCTYPE html>
@@ -80,11 +86,15 @@ if (file_exists('users.json')) {
 
         <h3>All Users</h3>
         <ul id="userList">
-            <?php foreach ($users as $user): ?>
-                <li class="user-item" data-username="<?= htmlspecialchars($user['username']) ?>">
-                    <?= htmlspecialchars($user['username']) ?>
-                </li>
-            <?php endforeach; ?>
+            <?php if (!empty($users)): ?>
+                <?php foreach ($users as $user): ?>
+                    <li class="user-item" data-username="<?= htmlspecialchars($user['username']) ?>">
+                        <?= htmlspecialchars($user['username']) ?>
+                    </li>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <li>No users found.</li>
+            <?php endif; ?>
         </ul>
     </div>
 
@@ -102,7 +112,7 @@ if (file_exists('users.json')) {
 </div>
 
 <script>
-    let currentChatUser  = '';
+    let currentChatUser = '';
 
     // Open a chat with a selected user
     $(document).on('click', '.chat-item', function() {
