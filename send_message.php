@@ -8,19 +8,13 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-// Check if the required parameters are provided
-if (!isset($_POST['to']) || !isset($_POST['message'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Missing recipient or message.']);
-    exit();
-}
-
 $from = $_SESSION['username']; // The logged-in user (sender)
-$to = trim($_POST['to']); // The recipient user
-$message = trim($_POST['message']); // The message content
+$to = isset($_POST['to']) ? trim($_POST['to']) : ''; // The recipient user
+$message = isset($_POST['message']) ? trim($_POST['message']) : ''; // The message content
 
 // Validate the message content
-if (empty($message)) {
-    echo json_encode(['status' => 'error', 'message' => 'Message cannot be empty.']);
+if (empty($message) || empty($to)) {
+    echo json_encode(['status' => 'error', 'message' => 'Message or recipient cannot be empty.']);
     exit();
 }
 
@@ -41,7 +35,7 @@ if (file_exists($messageFile)) {
 }
 
 // Create a unique chat key based on sender and receiver
- $chatKey = $from . '-' . $to;
+$chatKey = $from . '-' . $to;
 
 // Prepare the new message data
 $newMessage = [
@@ -51,17 +45,16 @@ $newMessage = [
     'time' => date('Y-m-d H:i:s') // Current timestamp
 ];
 
-// Add the new message to the appropriate chat
+// Save the new message to the messages data
 if (!isset($messagesData[$chatKey])) {
     $messagesData[$chatKey] = []; // Initialize the chat if it doesn't exist
 }
-$messagesData[$chatKey][] = $newMessage; // Append the new message
+$messagesData[$chatKey][] = $newMessage;
 
 // Save the updated messages back to the JSON file
 if (file_put_contents($messageFile, json_encode($messagesData, JSON_PRETTY_PRINT))) {
-    echo json_encode(['status' => 'success', 'message' => 'Message sent successfully.']);
+    echo json_encode(['status' => 'success']);
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Failed to save message.']);
 }
-exit();
 ?>
