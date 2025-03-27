@@ -1,49 +1,43 @@
 <?php
-session_start();
-header('Content-Type: application/json');
+session_start(); // Start session
+header('Content-Type: application/json'); // Ensure the response is JSON
 
-// Ensure user is logged in
+// Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['error' => 'Not logged in']);
+    echo json_encode(['status' => 'error', 'message' => 'User  not logged in.']);
     exit();
 }
 
-$username = $_SESSION['username'];
+// Check if the required parameter is provided
+if (!isset($_GET['chatKey'])) {
+    echo json_encode(['status' => 'error', 'message' => 'Missing chat key.']);
+    exit();
+}
 
-// Check if the user parameter is provided
-if (isset($_GET['user'])) {
-    $user = trim($_GET['user']);
+$chatKey = trim($_GET['chatKey']); // The chat key to load messages for
+$messageFile = 'chats/messages.json'; // Path to the JSON file where messages are stored
 
-    // Read the messages from the JSON file
-    $messagesFile = 'chats/messages.json';
-    if (file_exists($messagesFile)) {
-        $messages = json_decode(file_get_contents($messagesFile), true);
-    } else {
-        echo json_encode(['error' => 'No messages found']);
+// Fetch existing messages (if any)
+if (file_exists($messageFile)) {
+    $messagesData = json_decode(file_get_contents($messageFile), true);
+    
+    // Check for JSON decoding errors
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo json_encode(['status' => 'error', 'message' => 'Failed to decode messages: ' . json_last_error_msg()]);
         exit();
     }
-
-    // Filter messages for the current user and the selected chat user
-    $filteredMessages = array_filter($messages, function ($msg) use ($username, $user) {
-        return ($msg['sender'] === $username && $msg['receiver'] === $user) ||
-               ($msg['sender'] === $user && $msg['receiver'] === $username);
-    });
-
-    // Re-index the array
-    $filteredMessages = array_values($filteredMessages);
-
-    // Format the messages for JSON response
-    $formattedMessages = [];
-    foreach ($filteredMessages as $msg) {
-        $formattedMessages[] = [
-            'sender' => $msg['sender'],
-            'text' => $msg['message'],
-            'time' => $msg['timestamp']
-        ];
-    }
-
-    echo json_encode(['messages' => $formattedMessages]);
 } else {
-    echo json_encode(['error' => 'User not specified']);
+    echo json_encode(['status' => 'error', 'message' => 'Messages file not found.']);
+    exit();
 }
+
+// Check if the chat key exists
+if (!isset($messagesData[$chatKey])) {
+    echo json_encode(['status' => 'error', 'message' => 'No messages found for this conversation.']);
+    exit();
+}
+
+// Return the messages for the specified chat key
+echo json_encode(['status' => 'success', 'messages' => $messagesData[$chatKey]]);
+exit();
 ?>
