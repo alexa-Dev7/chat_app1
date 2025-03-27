@@ -1,36 +1,45 @@
 <?php
-session_start(); // Start session
-header('Content-Type: application/json'); // Ensure the response is JSON
+session_start();
+header('Content-Type: application/json');
 
-// Ensure the user is logged in
+// Ensure user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'message' => 'User  not logged in.']);
+    echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
     exit();
 }
 
-$chatKey = isset($_GET['chatKey']) ? trim($_GET['chatKey']) : ''; // Get the chat key from the request
+$username = $_SESSION['username'];
+$chatKey = $_GET['chatKey'] ?? '';
 
-// Path to the JSON file where messages are stored
+if (empty($chatKey)) {
+    echo json_encode(['status' => 'error', 'message' => 'Chat key is missing']);
+    exit();
+}
+
+// Path to the messages file
 $messageFile = 'chats/messages.json';
 
-// Fetch existing messages (if any)
-if (file_exists($messageFile)) {
-    $messagesData = json_decode(file_get_contents($messageFile), true);
-    
-    // Check for JSON decoding errors
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        echo json_encode(['status' => 'error', 'message' => 'Failed to decode messages: ' . json_last_error_msg()]);
-        exit();
-    }
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Messages file not found.']);
+if (!file_exists($messageFile)) {
+    echo json_encode(['status' => 'error', 'message' => 'No messages found for this chat']);
     exit();
 }
 
-// Check if the chat key exists
-if (isset($messagesData[$chatKey])) {
-    echo json_encode(['status' => 'success', 'messages' => $messagesData[$chatKey]]);
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'No messages found for this chat.']);
+// Load messages
+$messagesData = json_decode(file_get_contents($messageFile), true);
+
+if (json_last_error() !== JSON_ERROR_NONE) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid JSON format']);
+    exit();
 }
+
+// Retrieve messages for the given chat key
+$messages = $messagesData[$chatKey] ?? [];
+
+if (empty($messages)) {
+    echo json_encode(['status' => 'error', 'message' => 'No messages found']);
+    exit();
+}
+
+// Send JSON response
+echo json_encode(['status' => 'success', 'messages' => $messages]);
 ?>
