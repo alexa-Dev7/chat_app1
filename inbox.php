@@ -15,22 +15,38 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username']; // Logged-in user
 
-// Path to the JSON file where messages are stored
-$messageFile = 'chats/messages.json';
+// Database connection (Update credentials)
+$host = "your_host"; 
+$dbname = "your_dbname";
+$user = "your_db_user";
+$password = "your_db_password";
 
-// Fetch existing messages
-$messagesData = [];
-if (file_exists($messageFile)) {
-    $jsonData = file_get_contents($messageFile);
-    $messagesData = json_decode($jsonData, true);
-
-    // Handle JSON decoding error
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $messagesData = [];
-    }
+try {
+    $db = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
 }
 
-// Prepare the inbox data
+// Fetch all registered users from PostgreSQL
+$users = [];
+try {
+    $stmt = $db->query("SELECT username FROM users ORDER BY username ASC");
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Database error: " . $e->getMessage());
+}
+
+// Fetch inbox messages from JSON file
+$messageFile = 'chats/messages.json';
+$messagesData = [];
+
+if (file_exists($messageFile)) {
+    $jsonData = file_get_contents($messageFile);
+    $messagesData = json_decode($jsonData, true) ?: [];
+}
+
+// Prepare inbox
 $inbox = [];
 foreach ($messagesData as $chatKey => $messages) {
     if (strpos($chatKey, $username) !== false) {
@@ -42,19 +58,6 @@ foreach ($messagesData as $chatKey => $messages) {
             'receiver' => $lastMessage['receiver'] ?? '',
         ];
     }
-}
-
-// Fetch all registered users from PostgreSQL
-$users = [];
-try {
-    $db = new PDO("pgsql:host=your_host;dbname=your_dbname", "your_username", "your_password");
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    $stmt = $db->query("SELECT username FROM users ORDER BY username ASC");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
-    error_log("Database error: " . $e->getMessage());
 }
 ?>
 
@@ -74,14 +77,19 @@ try {
     <!-- Sidebar with users -->
     <div class="sidebar">
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
+        
         <h3>Inbox</h3>
         <div id="inbox">
-            <?php foreach ($inbox as $chat): ?>
-                <div class="chat-item" data-chat-key="<?= htmlspecialchars($chat['chatKey']) ?>">
-                    <strong><?= htmlspecialchars($chat['receiver']) ?></strong>: <?= htmlspecialchars($chat['lastMessage']) ?> <br>
-                    <small><?= htmlspecialchars($chat['timestamp']) ?></small>
-                </div>
-            <?php endforeach; ?>
+            <?php if (!empty($inbox)): ?>
+                <?php foreach ($inbox as $chat): ?>
+                    <div class="chat-item" data-chat-key="<?= htmlspecialchars($chat['chatKey']) ?>">
+                        <strong><?= htmlspecialchars($chat['receiver']) ?></strong>: <?= htmlspecialchars($chat['lastMessage']) ?> <br>
+                        <small><?= htmlspecialchars($chat['timestamp']) ?></small>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <p>No messages yet.</p>
+            <?php endif; ?>
         </div>
 
         <h3>All Users</h3>
