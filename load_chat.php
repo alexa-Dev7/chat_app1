@@ -8,14 +8,7 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-// Check if the required parameters are provided
-if (!isset($_GET['with'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Missing recipient.']);
-    exit();
-}
-
-$with = trim($_GET['with']); // The other user in the chat
-$username = $_SESSION['username']; // The logged-in user
+$chatKey = isset($_GET['chatKey']) ? trim($_GET['chatKey']) : ''; // Get the chat key from the request
 
 // Path to the JSON file where messages are stored
 $messageFile = 'chats/messages.json';
@@ -34,13 +27,10 @@ if (file_exists($messageFile)) {
     exit();
 }
 
-// Create a unique chat key based on the two users
-$chatKey = $username . '-' . $with;
-
-// Prepare the chat history
-$chatHistory = isset($messagesData[$chatKey]) ? $messagesData[$chatKey] : [];
-
-// Return the chat history as JSON
-echo json_encode(['status' => 'success', 'chatHistory' => $chatHistory]);
-exit();
+// Check if the chat key exists
+if (isset($messagesData[$chatKey])) {
+    echo json_encode(['status' => 'success', 'messages' => $messagesData[$chatKey]]);
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'No messages found for this chat.']);
+}
 ?>
