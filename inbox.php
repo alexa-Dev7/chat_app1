@@ -16,6 +16,7 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username']; // Logged-in user
 
 // Database connection (Update credentials)
+$host = "dpg-cvgd5atrie7s73bog17g-a";
 $dbname = "pager_sivs";
 $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
