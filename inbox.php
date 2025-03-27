@@ -16,10 +16,9 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username']; // Logged-in user
 
 // Database connection (Update credentials)
-$host = "your_host"; 
-$dbname = "your_dbname";
-$user = "your_db_user";
-$password = "your_db_password";
+$dbname = "dpg-cvgd5atrie7s73bog17g-a";
+$user = "pager_sivs_user";
+$password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 try {
     $db = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
