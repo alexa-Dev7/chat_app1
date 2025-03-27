@@ -1,43 +1,55 @@
-<?php
-session_start(); // Start session
+<?php 
+session_start();
+
+// Force JSON response and error handling
+header('Content-Type: text/html; charset=UTF-8');
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 // Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    header("Location: login.php"); // Redirect to login if not logged in
+    header("Location: login.php");
     exit();
 }
 
-$username = $_SESSION['username']; // Get the logged-in username
+$username = $_SESSION['username']; // Logged-in user
 
 // Path to the JSON file where messages are stored
 $messageFile = 'chats/messages.json';
 
-// Fetch existing messages (if any)
+// Fetch existing messages
+$messagesData = [];
 if (file_exists($messageFile)) {
-    $messagesData = json_decode(file_get_contents($messageFile), true);
-    
-    // Check for JSON decoding errors
+    $jsonData = file_get_contents($messageFile);
+    $messagesData = json_decode($jsonData, true);
+
+    // Handle JSON decoding error
     if (json_last_error() !== JSON_ERROR_NONE) {
-        $messagesData = []; // If there's an error, initialize as empty
+        $messagesData = [];
     }
-} else {
-    $messagesData = []; // Initialize an empty array if the file does not exist
 }
 
 // Prepare the inbox data
 $inbox = [];
 foreach ($messagesData as $chatKey => $messages) {
-    // Check if the current user is involved in the conversation
     if (strpos($chatKey, $username) !== false) {
-        $lastMessage = end($messages); // Get the last message in the conversation
+        $lastMessage = end($messages);
         $inbox[] = [
             'chatKey' => $chatKey,
-            'lastMessage' => $lastMessage['text'],
-            'timestamp' => $lastMessage['time'],
-            'receiver' => $lastMessage['receiver'],
+            'lastMessage' => $lastMessage['text'] ?? '',
+            'timestamp' => $lastMessage['time'] ?? '',
+            'receiver' => $lastMessage['receiver'] ?? '',
         ];
     }
 }
+
+// Fetch all registered users (Replace with DB query if needed)
+$users = [];
+if (file_exists('users.json')) {
+    $users = json_decode(file_get_contents('users.json'), true);
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -48,36 +60,8 @@ foreach ($messagesData as $chatKey => $messages) {
     <title>Inbox | Messenger</title>
     <link rel="stylesheet" href="assets/styles.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        /* Add your styles here */
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .chat-container {
-            display: flex;
-        }
-        .sidebar {
-            width: 200px;
-            border-right: 1px solid #ccc;
-            padding: 10px;
-        }
-        .chat-window {
-            flex: 1;
-            padding: 10px;
-        }
-        .chat-item {
-            cursor: pointer;
-            padding: 5px;
-            border-bottom: 1px solid #ccc;
-        }
-        .chat-item:hover {
-            background-color: #f0f0f0;
-        }
-        .message {
-            margin: 5px 0;
-        }
-    </style>
 </head>
+
 <body>
 
 <div class="chat-container">
@@ -93,6 +77,15 @@ foreach ($messagesData as $chatKey => $messages) {
                 </div>
             <?php endforeach; ?>
         </div>
+
+        <h3>All Users</h3>
+        <ul id="userList">
+            <?php foreach ($users as $user): ?>
+                <li class="user-item" data-username="<?= htmlspecialchars($user['username']) ?>">
+                    <?= htmlspecialchars($user['username']) ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
     </div>
 
     <!-- Chat window -->
@@ -113,20 +106,27 @@ foreach ($messagesData as $chatKey => $messages) {
 
     // Open a chat with a selected user
     $(document).on('click', '.chat-item', function() {
-        currentChatUser  = $(this).data('chat-key').split('-')[1]; // Get the receiver from the chat key
-        document.getElementById('chatWith').innerText = `Chat with ${currentChatUser }`;
+        currentChatUser = $(this).data('chat-key').split('-')[1];
+        document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
         document.getElementById('chatWindow').style.display = 'block';
         loadChat($(this).data('chat-key'));
     });
 
-    // Load messages from JSON file
+    $(document).on('click', '.user-item', function() {
+        currentChatUser = $(this).data('username');
+        document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
+        document.getElementById('chatWindow').style.display = 'block';
+        loadChat(`${currentChatUser}`);
+    });
+
+    // Load chat messages
     async function loadChat(chatKey) {
         try {
             const response = await fetch(`load_chat.php?chatKey=${chatKey}`);
             const data = await response.json();
             if (data.status === 'success') {
                 const chatBody = document.getElementById('chatBody');
-                chatBody.innerHTML = ''; // Clear previous messages
+                chatBody.innerHTML = '';
                 data.messages.forEach(message => {
                     const messageDiv = document.createElement('div');
                     messageDiv.className = 'message';
@@ -153,17 +153,52 @@ foreach ($messagesData as $chatKey => $messages) {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `to=${currentChatUser }&message=${encodeURIComponent(message)}`,
+                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`,
             });
-            const data = await response.json();
-            if (data.status === 'success') {
-                messageInput.value = ''; // Clear input
-                loadChat(currentChatUser ); // Reload chat messages
-            } else {
-                alert(data.message);
+
+            const text = await response.text();
+            try {
+                const data = JSON.parse(text);
+                if (data.status === 'success') {
+                    messageInput.value = '';
+                    loadChat(currentChatUser);
+                } else {
+                    alert(data.message);
+                }
+            } catch (jsonError) {
+                console.error("Invalid JSON response:", text);
+                alert("Error: Invalid JSON response from the server.");
             }
         } catch (error) {
             console.error('Error sending message:', error);
+        }
+    }
+
+    // Auto-refresh chat
+    setInterval(loadInbox, 3000);
+
+    async function loadInbox() {
+        try {
+            const response = await fetch('load_inbox.php');
+            const text = await response.text();
+            try {
+                const data = JSON.parse(text);
+                if (data.status === 'success') {
+                    const inboxContainer = document.getElementById('inbox');
+                    inboxContainer.innerHTML = '';
+                    data.inbox.forEach(chat => {
+                        const chatItem = document.createElement('div');
+                        chatItem.className = 'chat-item';
+                        chatItem.dataset.chatKey = chat.chatKey;
+                        chatItem.innerHTML = `<strong>${chat.receiver}</strong>: ${chat.lastMessage} <br><small>${chat.timestamp}</small>`;
+                        inboxContainer.appendChild(chatItem);
+                    });
+                }
+            } catch (jsonError) {
+                console.error("Inbox JSON Error:", text);
+            }
+        } catch (error) {
+            console.error('Error loading inbox:', error);
         }
     }
 </script>
