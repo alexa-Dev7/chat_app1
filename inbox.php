@@ -130,27 +130,42 @@ try {
         loadChat(`${currentChatUser}`);
     });
 
-    // Load chat messages
-    async function loadChat(chatKey) {
+// Load chat messages
+async function loadChat(chatKey) {
+    try {
+        const response = await fetch(`load_chat.php?chatKey=${encodeURIComponent(chatKey)}`);
+        const text = await response.text();
+        
         try {
-            const response = await fetch(`load_chat.php?chatKey=${chatKey}`);
-            const data = await response.json();
+            const data = JSON.parse(text);
+
             if (data.status === 'success') {
                 const chatBody = document.getElementById('chatBody');
                 chatBody.innerHTML = '';
-                data.messages.forEach(message => {
-                    const messageDiv = document.createElement('div');
-                    messageDiv.className = 'message';
-                    messageDiv.innerText = `${message.sender}: ${message.text} (${message.time})`;
-                    chatBody.appendChild(messageDiv);
-                });
+                
+                if (data.messages.length === 0) {
+                    chatBody.innerHTML = "<p>No messages found.</p>";
+                } else {
+                    data.messages.forEach(message => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = 'message';
+                        messageDiv.innerText = `${message.sender}: ${message.text} (${message.time})`;
+                        chatBody.appendChild(messageDiv);
+                    });
+                }
             } else {
+                console.error('Chat Error:', data.message);
                 alert(data.message);
             }
-        } catch (error) {
-            console.error('Error loading chat:', error);
+        } catch (jsonError) {
+            console.error("Invalid JSON response:", text);
+            alert("Error: Invalid JSON response from the server.");
         }
+    } catch (error) {
+        console.error('Error loading chat:', error);
+        alert("Error fetching chat messages.");
     }
+}
 
     // Send a message
     async function sendMessage(event) {
