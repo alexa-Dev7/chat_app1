@@ -54,12 +54,10 @@ if (!file_exists($messagesFile)) {
     }
 }
 
-// Set proper permissions for messages.json to make sure it's writable
+// Check if the file is writable (this check is enough instead of chmod)
 if (!is_writable($messagesFile)) {
-    if (!chmod($messagesFile, 0666)) {
-        echo json_encode(['status' => 'error', 'message' => 'Failed to set write permissions for messages.json']);
-        exit();
-    }
+    echo json_encode(['status' => 'error', 'message' => 'Permission denied: Cannot write to messages.json']);
+    exit();
 }
 
 try {
@@ -99,3 +97,5 @@ try {
     echo json_encode(['status' => 'error', 'message' => 'Failed to send message']);
 }
 ?>
+
+
