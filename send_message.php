@@ -1,6 +1,6 @@
 <?php
 session_start();
-header('Content-Type: application/json'); // Ensure JSON response
+header('Content-Type: application/json');
 
 // Database Connection (Ensure this matches your actual DB details)
 $host = 'dpg-cvgd5atrie7s73bog17g-a';
@@ -33,15 +33,33 @@ if (empty($receiver) || empty($message)) {
     exit();
 }
 
-try {
-    // Store message in JSON file (as per your setup)
-    $messagesFile = 'chats/messages.json';
+// Define file path
+$messagesDir = 'chats';
+$messagesFile = $messagesDir . '/messages.json';
 
+// Ensure chats directory exists and set permissions
+if (!is_dir($messagesDir)) {
+    mkdir($messagesDir, 0777, true); // Create directory with full permissions
+}
+
+// Ensure messages.json file exists and is writable
+if (!file_exists($messagesFile)) {
+    file_put_contents($messagesFile, '{}'); // Create an empty JSON object
+}
+
+// Set file permissions to make it writable
+chmod($messagesFile, 0666);
+
+if (!is_writable($messagesFile)) {
+    echo json_encode(['status' => 'error', 'message' => 'Permission denied: Cannot write to messages.json']);
+    exit();
+}
+
+try {
     // Load existing messages
     $messagesData = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
-
     if (json_last_error() !== JSON_ERROR_NONE) {
-        $messagesData = []; // Fix corrupted JSON
+        $messagesData = []; // Reset if corrupted
     }
 
     // Create a unique chat key
