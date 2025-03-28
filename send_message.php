@@ -38,7 +38,7 @@ $messagesFile = $messagesDir . '/messages.json';
 
 // Ensure chats directory exists and set permissions
 if (!is_dir($messagesDir)) {
-    // Create directory with 0777 permissions (full access to all)
+    // Attempt to create the directory with 0777 permissions (full access to all)
     if (!mkdir($messagesDir, 0777, true)) {
         echo json_encode(['status' => 'error', 'message' => 'Failed to create chats directory']);
         exit();
@@ -47,17 +47,20 @@ if (!is_dir($messagesDir)) {
 
 // Ensure messages.json file exists and is writable
 if (!file_exists($messagesFile)) {
-    // Create an empty JSON object if the file doesn't exist
+    // Attempt to create the file with empty JSON object if it doesn't exist
     if (file_put_contents($messagesFile, '{}') === false) {
         echo json_encode(['status' => 'error', 'message' => 'Failed to create messages.json']);
         exit();
     }
 }
 
-// Check if the file is writable (this check is enough instead of chmod)
+// Check if the file is writable
 if (!is_writable($messagesFile)) {
-    echo json_encode(['status' => 'error', 'message' => 'Permission denied: Cannot write to messages.json']);
-    exit();
+    // Attempt to set the file's write permissions using chmod if needed
+    if (!chmod($messagesFile, 0666)) {
+        echo json_encode(['status' => 'error', 'message' => 'Permission denied: Cannot write to messages.json']);
+        exit();
+    }
 }
 
 try {
@@ -97,5 +100,3 @@ try {
     echo json_encode(['status' => 'error', 'message' => 'Failed to send message']);
 }
 ?>
-
-
