@@ -2,7 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 
-// Database Connection (Ensure this matches your actual DB details)
+// Database Connection
 $host = 'dpg-cvgd5atrie7s73bog17g-a';
 $dbname = 'pager_sivs';
 $user = 'pager_sivs_user';
@@ -27,7 +27,6 @@ $sender = $_SESSION['username'];
 $receiver = $_POST['to'] ?? '';
 $message = $_POST['message'] ?? '';
 
-// Validate input
 if (empty($receiver) || empty($message)) {
     echo json_encode(['status' => 'error', 'message' => 'Message or recipient is missing']);
     exit();
@@ -39,7 +38,7 @@ $messagesFile = $messagesDir . '/messages.json';
 
 // Ensure chats directory exists and set permissions
 if (!is_dir($messagesDir)) {
-    mkdir($messagesDir, 0777, true); // Create directory with full permissions
+    mkdir($messagesDir, 0777, true);
 }
 
 // Ensure messages.json file exists and is writable
@@ -47,7 +46,6 @@ if (!file_exists($messagesFile)) {
     file_put_contents($messagesFile, '{}'); // Create an empty JSON object
 }
 
-// Set file permissions to make it writable
 chmod($messagesFile, 0666);
 
 if (!is_writable($messagesFile)) {
@@ -57,16 +55,21 @@ if (!is_writable($messagesFile)) {
 
 try {
     // Load existing messages
-    $messagesData = file_exists($messagesFile) ? json_decode(file_get_contents($messagesFile), true) : [];
+    $messagesData = json_decode(file_get_contents($messagesFile), true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         $messagesData = []; // Reset if corrupted
     }
 
-    // Create a unique chat key
-    $chatKey = $sender . '-' . $receiver;
-    if (!isset($messagesData[$chatKey])) {
-        $messagesData[$chatKey] = [];
+    // Create chat key (use both sender and receiver to ensure uniqueness)
+    $chatKey1 = $sender . '-' . $receiver;
+    $chatKey2 = $receiver . '-' . $sender;
+
+    if (!isset($messagesData[$chatKey1]) && !isset($messagesData[$chatKey2])) {
+        $messagesData[$chatKey1] = [];
     }
+
+    // Determine correct chat key
+    $chatKey = isset($messagesData[$chatKey1]) ? $chatKey1 : $chatKey2;
 
     // Append new message
     $messagesData[$chatKey][] = [
