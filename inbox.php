@@ -1,7 +1,6 @@
-<?php 
+<?php
 session_start();
 
-// Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
@@ -9,13 +8,12 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username']; // Logged-in user
 
-// PostgreSQL Database Credentials
-$host = "dpg-cvgd5atrie7s73bog17g-a"; // e.g., "localhost"
-$dbname = "pager_sivs"; // e.g., "pager_sivs"
+// Database connection
+$host = "dpg-cvgd5atrie7s73bog17g-a";
+$dbname = "pager_sivs";
 $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
-// Connect to PostgreSQL
 try {
     $dsn = "pgsql:host=$host;dbname=$dbname";
     $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
@@ -23,22 +21,15 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Path to the JSON file where messages are stored
 $messageFile = 'chats/messages.json';
 
-// Fetch existing messages
+// Get messages from the file
 $messagesData = [];
 if (file_exists($messageFile)) {
     $jsonData = file_get_contents($messageFile);
     $messagesData = json_decode($jsonData, true);
-
-    // Handle JSON decoding error
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $messagesData = [];
-    }
 }
 
-// Prepare the inbox data
 $inbox = [];
 foreach ($messagesData as $chatKey => $messages) {
     if (strpos($chatKey, $username) !== false) {
@@ -52,7 +43,7 @@ foreach ($messagesData as $chatKey => $messages) {
     }
 }
 
-// Fetch all registered users from PostgreSQL
+// Get all users
 $users = [];
 try {
     $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
@@ -115,7 +106,7 @@ try {
 <script>
     let currentChatUser = '';
 
-    // Open a chat with a selected user
+    // Open chat with a selected user
     $(document).on('click', '.chat-item', function() {
         currentChatUser = $(this).data('chat-key').split('-')[1];
         document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
