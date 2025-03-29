@@ -27,13 +27,33 @@ try {
         exit();
     }
 
+    // ✅ Verify correct column names
+    $stmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name = 'messages'");
+    $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $sender_col = in_array('sender', $columns) ? 'sender' : (in_array('from_user', $columns) ? 'from_user' : '');
+    $receiver_col = in_array('receiver', $columns) ? 'receiver' : (in_array('to_user', $columns) ? 'to_user' : '');
+    $text_col = in_array('text', $columns) ? 'text' : (in_array('message', $columns) ? 'message' : '');
+    $timestamp_col = in_array('timestamp', $columns) ? 'timestamp' : (in_array('sent_at', $columns) ? 'sent_at' : '');
+
+    if (!$sender_col || !$receiver_col || !$text_col || !$timestamp_col) {
+        echo json_encode(["status" => "error", "message" => "One or more required columns are missing."]);
+        exit();
+    }
+
     $chatKey = $_GET['chatKey'] ?? '';
     if (empty($chatKey)) {
         echo json_encode(["status" => "error", "message" => "No chatKey provided."]);
         exit();
     }
 
-    $stmt = $pdo->prepare("SELECT sender, text, timestamp FROM messages WHERE receiver = :chatKey OR sender = :chatKey ORDER BY timestamp ASC");
+    // ✅ Use correct column names dynamically
+    $query = "SELECT $sender_col AS sender, $text_col AS text, $timestamp_col AS timestamp 
+              FROM messages 
+              WHERE $receiver_col = :chatKey OR $sender_col = :chatKey 
+              ORDER BY $timestamp_col ASC";
+
+    $stmt = $pdo->prepare($query);
     $stmt->execute(['chatKey' => $chatKey]);
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
