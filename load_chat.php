@@ -8,11 +8,11 @@ if (!isset($_GET['chatKey'])) {
 }
 
 $chatKey = $_GET['chatKey'];
-$messagesFile = 'chats/messages.json';
+$messageFile = 'chats/messages.json';
 
 $messagesData = [];
-if (file_exists($messagesFile)) {
-    $messagesData = json_decode(file_get_contents($messagesFile), true);
+if (file_exists($messageFile)) {
+    $messagesData = json_decode(file_get_contents($messageFile), true);
 }
 
 if (!isset($messagesData[$chatKey])) {
