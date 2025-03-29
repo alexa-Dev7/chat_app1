@@ -16,18 +16,14 @@ try {
         $columns[] = $row['column_name'];
     }
 
-    // Rename 'recipient' to 'receiver' if it exists
-    if (in_array('recipient', $columns) && !in_array('receiver', $columns)) {
-        $pdo->exec("ALTER TABLE messages RENAME COLUMN recipient TO receiver;");
-        echo "✅ Column 'recipient' renamed to 'receiver'.\n";
-    }
-
-    // Add 'receiver' column if missing
-    if (!in_array('receiver', $columns)) {
-        $pdo->exec("ALTER TABLE messages ADD COLUMN receiver VARCHAR(255) NOT NULL;");
-        echo "✅ Column 'receiver' added.\n";
+    // If both recipient and receiver exist, drop recipient
+    if (in_array('recipient', $columns) && in_array('receiver', $columns)) {
+        $pdo->exec("ALTER TABLE messages DROP COLUMN recipient;");
+        echo "✅ Column 'recipient' was dropped (duplicate of 'receiver').\n";
+    } elseif (!in_array('receiver', $columns)) {
+        echo "❌ Error: Column 'receiver' does not exist. Fix manually.\n";
     } else {
-        echo "✅ Column 'receiver' already exists.\n";
+        echo "✅ Database is already correct.\n";
     }
 
 } catch (PDOException $e) {
