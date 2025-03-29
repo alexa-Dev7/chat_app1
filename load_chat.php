@@ -1,37 +1,16 @@
 <?php
-session_start();
-header('Content-Type: application/json');
-
-if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
-    exit();
-}
-
-$username = $_SESSION['username'];
 $chatKey = $_GET['chatKey'] ?? '';
+$messageFile = 'chats/messages.json';
 
-if (empty($chatKey)) {
-    echo json_encode(['status' => 'error', 'message' => 'Chat key is missing']);
+if (!$chatKey || !file_exists($messageFile)) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid chat key or messages file not found.']);
     exit();
 }
 
-$messagesFile = 'chats/messages.json';
-
-// Check if file exists and is readable
-if (!file_exists($messagesFile) || !is_readable($messagesFile)) {
-    echo json_encode(['status' => 'error', 'message' => 'No messages found']);
-    exit();
+// Load messages
+$messagesData = json_decode(file_get_contents($messageFile), true);
+if (isset($messagesData[$chatKey])) {
+    echo json_encode(['status' => 'success', 'messages' => $messagesData[$chatKey]]);
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'Chat not found.']);
 }
-
-$messagesData = json_decode(file_get_contents($messagesFile), true);
-
-if (json_last_error() !== JSON_ERROR_NONE || !is_array($messagesData)) {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid JSON format']);
-    exit();
-}
-
-// Fetch chat messages
-$chatMessages = $messagesData[$chatKey] ?? [];
-
-echo json_encode(['status' => 'success', 'messages' => $chatMessages]);
-?>
