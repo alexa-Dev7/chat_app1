@@ -1,26 +1,44 @@
 <?php
-// load_chat.php
-header('Content-Type: application/json');
+session_start();
 
-if (!isset($_GET['chatKey'])) {
-    echo json_encode(['status' => 'error', 'message' => 'Chat key not provided']);
+// Ensure the user is logged in
+if (!isset($_SESSION['username'])) {
+    echo json_encode(['status' => 'error', 'message' => 'User not logged in']);
     exit();
 }
 
-$chatKey = $_GET['chatKey'];
-$messageFile = 'chats/messages.json';
+$username = $_SESSION['username']; // Logged-in user
 
-$messagesData = [];
-if (file_exists($messageFile)) {
-    $messagesData = json_decode(file_get_contents($messageFile), true);
+// Get the chat key (either username1-username2 or username2-username1)
+$chatKey = isset($_GET['chatKey']) ? $_GET['chatKey'] : '';
+
+// Validate chat key
+if (empty($chatKey)) {
+    echo json_encode(['status' => 'error', 'message' => 'Chat key is required']);
+    exit();
 }
 
+// Path to the JSON file where messages are stored
+$messageFile = 'chats/messages.json';
+
+if (file_exists($messageFile)) {
+    $jsonData = file_get_contents($messageFile);
+    $messagesData = json_decode($jsonData, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        echo json_encode(['status' => 'error', 'message' => 'Error reading chat data']);
+        exit();
+    }
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'Chat data file not found']);
+    exit();
+}
+
+// Check if the chat exists
 if (!isset($messagesData[$chatKey])) {
     echo json_encode(['status' => 'error', 'message' => 'Chat not found']);
     exit();
 }
 
-$messages = $messagesData[$chatKey];
-
-echo json_encode(['status' => 'success', 'messages' => $messages]);
+// Return the messages for the chat
+echo json_encode(['status' => 'success', 'messages' => $messagesData[$chatKey]]);
 ?>
