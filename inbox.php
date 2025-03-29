@@ -94,7 +94,7 @@ try {
         currentChatUser = $(this).data('username');
         document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
         document.getElementById('chatWindow').style.display = 'block';
-        loadChat(`${currentChatUser}`);
+        loadChat(currentChatUser); // Use the username directly as chat key
     });
 
     // Load chat messages
@@ -157,7 +157,7 @@ try {
                 const data = JSON.parse(text);
                 if (data.status === 'success') {
                     messageInput.value = '';
-                    loadChat(currentChatUser);
+                    loadChat(currentChatUser); // Reload chat after sending message
                 } else {
                     alert(data.message);
                 }
@@ -170,7 +170,7 @@ try {
         }
     }
 
-    // Auto-refresh chat
+    // Auto-refresh inbox
     setInterval(loadInbox, 3000);
 
     async function loadInbox() {
