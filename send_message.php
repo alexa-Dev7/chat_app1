@@ -19,6 +19,17 @@ if (empty($message) || empty($to)) {
 // Path to the messages file
 $messageFile = 'chats/messages.json';
 
+// Ensure the file and directory are writable
+if (!is_writable($messageFile)) {
+    // If the file is not writable, set the permission to 0666 (read/write for all)
+    chmod($messageFile, 0666);  // Attempt to change file permissions via PHP
+}
+
+if (!is_writable('chats')) {
+    // Ensure the directory is writable
+    chmod('chats', 0777);  // Attempt to change directory permissions via PHP
+}
+
 // Fetch existing messages
 $messagesData = [];
 if (file_exists($messageFile)) {
