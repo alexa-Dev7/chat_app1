@@ -1,17 +1,17 @@
 <?php
 session_start();
 
+// Check if the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["status" => "error", "message" => "You must be logged in to view the chat"]);
+    echo json_encode(["status" => "error", "message" => "You must be logged in to view chat"]);
     exit();
 }
 
 $username = $_SESSION['username']; // Logged-in user
-$chatKey = $_GET['chatKey']; // The username of the person we're chatting with
 
-// PostgreSQL Database Credentials
-$host = "dpg-cvgd5atrie7s73bog17g-a"; 
-$dbname = "pager_sivs"; 
+// Database connection details
+$host = "dpg-cvgd5atrie7s73bog17g-a";
+$dbname = "pager_sivs";
 $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
@@ -24,41 +24,40 @@ try {
     exit();
 }
 
-// Get user IDs
+// Check if chatKey (recipient username) is provided
+if (!isset($_GET['chatKey'])) {
+    echo json_encode(["status" => "error", "message" => "Chat not found"]);
+    exit();
+}
+
+$chatKey = $_GET['chatKey']; // Recipient username
+
+// Retrieve sender's user ID
 $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
 $stmt->execute(['username' => $username]);
 $sender_id = $stmt->fetchColumn();
 
+// Retrieve recipient's user ID
 $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
 $stmt->execute(['username' => $chatKey]);
 $recipient_id = $stmt->fetchColumn();
 
+// Check if both users exist in the database
 if ($sender_id && $recipient_id) {
-    // Fetch chat messages
+    // Fetch messages between the two users
     $stmt = $pdo->prepare("
-        SELECT m.text, m.timestamp, u.username AS sender
+        SELECT m.text, m.timestamp, u.username as sender 
         FROM messages m
-        JOIN users u ON m.sender = u.id
+        JOIN users u ON u.id = m.sender
         WHERE (m.sender = :sender_id AND m.recipient = :recipient_id)
-        OR (m.sender = :recipient_id AND m.recipient = :sender_id)
-        ORDER BY m.timestamp
+           OR (m.sender = :recipient_id AND m.recipient = :sender_id)
+        ORDER BY m.timestamp ASC
     ");
     $stmt->execute(['sender_id' => $sender_id, 'recipient_id' => $recipient_id]);
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Check if messages exist, return a custom message when there are no messages
-    if (count($messages) === 0) {
-        echo json_encode([
-            'status' => 'success',
-            'messages' => [],
-            'message' => 'No messages yet. Start a new conversation!'
-        ]);
-    } else {
-        echo json_encode([
-            'status' => 'success',
-            'messages' => $messages
-        ]);
-    }
+    // Return the chat messages
+    echo json_encode(["status" => "success", "messages" => $messages]);
 } else {
     echo json_encode(["status" => "error", "message" => "Invalid chat"]);
 }
