@@ -1,50 +1,55 @@
 <?php
 session_start();
+
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["status" => "error", "message" => "User not logged in."]);
+    echo json_encode(["status" => "error", "message" => "You must be logged in to view the chat"]);
     exit();
 }
 
-require 'db_connect.php';
+$username = $_SESSION['username']; // Logged-in user
+$chatKey = $_GET['chatKey']; // The username of the person we're chatting with
 
-$chatKey = $_GET['chatKey'] ?? '';
-if (empty($chatKey)) {
-    echo json_encode(["status" => "error", "message" => "Chat key is required."]);
-    exit();
-}
+// PostgreSQL Database Credentials
+$host = "dpg-cvgd5atrie7s73bog17g-a"; 
+$dbname = "pager_sivs"; 
+$user = "pager_sivs_user";
+$password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
+// Connect to PostgreSQL
 try {
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
-    $stmt->execute(['username' => $_SESSION['username']]);
-    $userId = $stmt->fetchColumn();
+    $dsn = "pgsql:host=$host;dbname=$dbname";
+    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
+}
 
-    if (!$userId) {
-        echo json_encode(["status" => "error", "message" => "User not found."]);
-        exit();
-    }
+// Get user IDs
+$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
+$stmt->execute(['username' => $username]);
+$sender_id = $stmt->fetchColumn();
 
-    // Fetch messages between user and the chatKey user
+$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
+$stmt->execute(['username' => $chatKey]);
+$recipient_id = $stmt->fetchColumn();
+
+if ($sender_id && $recipient_id) {
+    // Fetch chat messages
     $stmt = $pdo->prepare("
-        SELECT m.text, m.timestamp, u.username as sender
+        SELECT m.text, m.timestamp, u.username AS sender
         FROM messages m
         JOIN users u ON m.sender = u.id
-        WHERE (m.sender = :userId AND m.recipient = :chatKeyId)
-           OR (m.sender = :chatKeyId AND m.recipient = :userId)
-        ORDER BY m.timestamp ASC
+        WHERE (m.sender = :sender_id AND m.recipient = :recipient_id)
+        OR (m.sender = :recipient_id AND m.recipient = :sender_id)
+        ORDER BY m.timestamp
     ");
-    $stmt->execute([
-        'userId' => $userId,
-        'chatKeyId' => $chatKey
-    ]);
-
+    $stmt->execute(['sender_id' => $sender_id, 'recipient_id' => $recipient_id]);
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if ($messages) {
-        echo json_encode(["status" => "success", "messages" => $messages]);
-    } else {
-        echo json_encode(["status" => "error", "message" => "No messages found."]);
-    }
-} catch (PDOException $e) {
-    echo json_encode(["status" => "error", "message" => "Error fetching messages: " . $e->getMessage()]);
+    echo json_encode([
+        'status' => 'success',
+        'messages' => $messages
+    ]);
+} else {
+    echo json_encode(["status" => "error", "message" => "Invalid chat"]);
 }
 ?>
