@@ -9,10 +9,10 @@ if (!isset($_SESSION['username'])) {
 $username = $_SESSION['username']; // Logged-in user
 
 // PostgreSQL Database Credentials
-$host = "your_host"; 
-$dbname = "your_dbname"; 
-$user = "your_user";
-$password = "your_password";
+$host = "dpg-cvgd5atrie7s73bog17g-a"; 
+$dbname = "pager_sivs"; 
+$user = "pager_sivs_user";
+$password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 // Connect to PostgreSQL
 try {
