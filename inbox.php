@@ -9,6 +9,20 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username']; // Logged-in user
 
+// PostgreSQL Database Credentials
+$host = "dpg-cvgd5atrie7s73bog17g-a"; // e.g., "localhost"
+$dbname = "pager_sivs"; // e.g., "pager_sivs"
+$user = "pager_sivs_user";
+$password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
+
+// Connect to PostgreSQL
+try {
+    $dsn = "pgsql:host=$host;dbname=$dbname";
+    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+} catch (PDOException $e) {
+    die("Database connection failed: " . $e->getMessage());
+}
+
 // Path to the JSON file where messages are stored
 $messageFile = 'chats/messages.json';
 
