@@ -172,9 +172,44 @@ try {
         }
     }
 
-    // Auto-refresh inbox
+    // Send a message (Prevent page reload)
+    async function sendMessage(event) {
+        event.preventDefault(); // Prevent the default form submission (which reloads the page)
+        
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value;
+
+        try {
+            const response = await fetch('send_message.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`,
+            });
+
+            const text = await response.text();
+            try {
+                const data = JSON.parse(text);
+                if (data.status === 'success') {
+                    messageInput.value = ''; // Clear the message input
+                    loadChat(currentChatUser); // Reload the chat after sending the message
+                } else {
+                    alert(data.message);
+                }
+            } catch (jsonError) {
+                console.error("Invalid JSON response:", text);
+                alert("Error: Invalid JSON response from the server.");
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
+    }
+
+    // Auto-refresh inbox every 3 seconds
     setInterval(loadInbox, 3000);
 
+    // Load inbox (get chat list)
     async function loadInbox() {
         try {
             const response = await fetch('load_inbox.php');
@@ -204,8 +239,6 @@ try {
         }
     }
 </script>
-
-
 </body>
 </html>
 
