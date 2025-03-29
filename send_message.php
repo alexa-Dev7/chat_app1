@@ -1,47 +1,46 @@
 <?php
 session_start();
-require 'db_connect.php';
-
-// Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["status" => "error", "message" => "You must be logged in"]);
+    echo json_encode(["status" => "error", "message" => "User not logged in."]);
     exit();
 }
 
-$sender = $_SESSION['username'];  // Logged-in user
-$recipient = $_POST['to'];        // The recipient username
-$message = $_POST['message'];     // The message content
+require 'db_connect.php';
 
-// Ensure the recipient exists
+$sender = $_SESSION['username'];
+$recipient = $_POST['to'] ?? '';
+$message = $_POST['message'] ?? '';
+
+if (empty($recipient) || empty($message)) {
+    echo json_encode(["status" => "error", "message" => "Recipient or message is empty."]);
+    exit();
+}
+
 try {
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
-    $stmt->execute(['username' => $recipient]);
-    $recipientData = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$recipientData) {
-        echo json_encode(["status" => "error", "message" => "Recipient not found"]);
-        exit();
-    }
-
-    // Get the sender's ID
+    // Fetch sender and recipient user IDs
     $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
     $stmt->execute(['username' => $sender]);
-    $senderData = $stmt->fetch(PDO::FETCH_ASSOC);
+    $sender_id = $stmt->fetchColumn();
 
-    if (!$senderData) {
-        echo json_encode(["status" => "error", "message" => "Sender not found"]);
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
+    $stmt->execute(['username' => $recipient]);
+    $recipient_id = $stmt->fetchColumn();
+
+    if (!$sender_id || !$recipient_id) {
+        echo json_encode(["status" => "error", "message" => "User not found."]);
         exit();
     }
 
     // Insert the message into the database
     $stmt = $pdo->prepare("INSERT INTO messages (sender, recipient, text) VALUES (:sender, :recipient, :text)");
     $stmt->execute([
-        'sender' => $senderData['id'],
-        'recipient' => $recipientData['id'],
-        'text' => $message
+        'sender' => $sender_id,
+        'recipient' => $recipient_id,
+        'text' => $message,
     ]);
 
-    echo json_encode(["status" => "success", "message" => "Message sent"]);
+    echo json_encode(["status" => "success", "message" => "Message sent successfully."]);
 } catch (PDOException $e) {
-    echo json_encode(["status" => "error", "message" => "Failed to send message: " . $e->getMessage()]);
+    echo json_encode(["status" => "error", "message" => "Error sending message: " . $e->getMessage()]);
 }
+?>
