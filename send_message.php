@@ -1,44 +1,42 @@
 <?php
+// send_message.php
+header('Content-Type: application/json');
+
+// Get the logged-in user and message to send
 session_start();
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'message' => 'User not logged in.']);
+    echo json_encode(['status' => 'error', 'message' => 'User not logged in']);
     exit();
 }
 
-$username = $_SESSION['username'];
-$receiver = $_POST['to'] ?? '';
-$message = $_POST['message'] ?? '';
-$messageFile = 'chats/messages.json';
+$from = $_SESSION['username'];
+$to = $_POST['to'];
+$message = $_POST['message'];
 
-if (empty($receiver) || empty($message)) {
-    echo json_encode(['status' => 'error', 'message' => 'Message or receiver cannot be empty.']);
-    exit();
+// Simulating saving the message to a file (or database)
+$messagesFile = 'chats/messages.json';
+if (file_exists($messagesFile)) {
+    $messagesData = json_decode(file_get_contents($messagesFile), true);
+} else {
+    $messagesData = [];
 }
 
-// Read current messages
-$messagesData = [];
-if (file_exists($messageFile)) {
-    $jsonData = file_get_contents($messageFile);
-    $messagesData = json_decode($jsonData, true);
+// Create a new chat entry if it doesn't exist
+$chatKey = $from . '-' . $to;
+if (!isset($messagesData[$chatKey])) {
+    $messagesData[$chatKey] = [];
 }
-
-// Prepare chat key
-$chatKey = (strpos($receiver, $username) < strpos($username, $receiver)) 
-    ? "$username-$receiver" 
-    : "$receiver-$username";
 
 // Add the new message
 $messagesData[$chatKey][] = [
-    'sender' => $username,
-    'receiver' => $receiver,
+    'sender' => $from,
+    'receiver' => $to,
     'text' => $message,
-    'time' => date('Y-m-d H:i:s')
+    'time' => date('Y-m-d H:i:s'),
 ];
 
-// Save back to messages.json
-if (file_put_contents($messageFile, json_encode($messagesData, JSON_PRETTY_PRINT)) === false) {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to write to messages.json']);
-    exit();
-}
+// Save the updated messages back to the file
+file_put_contents($messagesFile, json_encode($messagesData));
 
-echo json_encode(['status' => 'success']);
+echo json_encode(['status' => 'success', 'message' => 'Message sent successfully']);
+?>
