@@ -14,13 +14,13 @@ $host = "dpg-cvgd5atrie7s73bog17g-a";
 $dbname = "pager_sivs"; 
 $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
-
 // Connect to PostgreSQL
 try {
     $dsn = "pgsql:host=$host;dbname=$dbname";
     $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 } catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    echo json_encode(["status" => "error", "message" => "Database connection failed: " . $e->getMessage()]);
+    exit();
 }
 
 // Get user IDs
@@ -52,4 +52,3 @@ if ($sender_id && $recipient_id) {
 } else {
     echo json_encode(["status" => "error", "message" => "Invalid chat"]);
 }
-?>
