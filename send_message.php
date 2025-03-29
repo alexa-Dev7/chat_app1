@@ -1,60 +1,47 @@
 <?php
 session_start();
+require 'db_connect.php';
 
 // Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'message' => 'User not logged in']);
+    echo json_encode(["status" => "error", "message" => "You must be logged in"]);
     exit();
 }
 
-$username = $_SESSION['username']; // Logged-in user
-$message = $_POST['message'] ?? '';
-$to = $_POST['to'] ?? '';
+$sender = $_SESSION['username'];  // Logged-in user
+$recipient = $_POST['to'];        // The recipient username
+$message = $_POST['message'];     // The message content
 
-if (empty($message) || empty($to)) {
-    echo json_encode(['status' => 'error', 'message' => 'Message and recipient cannot be empty']);
-    exit();
-}
-
-// Path to the messages file
-$messageFile = 'chats/messages.json';
-
-// Ensure the file is writable by setting permissions if it's not
-if (!is_writable($messageFile)) {
-    chmod($messageFile, 0666); // Attempt to make the file writable (read and write permissions for all)
-    if (!is_writable($messageFile)) {
-        echo json_encode(['status' => 'error', 'message' => 'Failed to make the message file writable']);
+// Ensure the recipient exists
+try {
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
+    $stmt->execute(['username' => $recipient]);
+    $recipientData = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$recipientData) {
+        echo json_encode(["status" => "error", "message" => "Recipient not found"]);
         exit();
     }
-}
 
-// Fetch existing messages
-$messagesData = [];
-if (file_exists($messageFile)) {
-    $jsonData = file_get_contents($messageFile);
-    $messagesData = json_decode($jsonData, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        $messagesData = [];
+    // Get the sender's ID
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
+    $stmt->execute(['username' => $sender]);
+    $senderData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$senderData) {
+        echo json_encode(["status" => "error", "message" => "Sender not found"]);
+        exit();
     }
+
+    // Insert the message into the database
+    $stmt = $pdo->prepare("INSERT INTO messages (sender, recipient, text) VALUES (:sender, :recipient, :text)");
+    $stmt->execute([
+        'sender' => $senderData['id'],
+        'recipient' => $recipientData['id'],
+        'text' => $message
+    ]);
+
+    echo json_encode(["status" => "success", "message" => "Message sent"]);
+} catch (PDOException $e) {
+    echo json_encode(["status" => "error", "message" => "Failed to send message: " . $e->getMessage()]);
 }
-
-// Generate chat key
-$chatKey = (strcmp($username, $to) < 0) ? $username . '-' . $to : $to . '-' . $username;
-
-// Add new message
-$timestamp = date('Y-m-d H:i:s');
-$messagesData[$chatKey][] = [
-    'sender' => $username,
-    'receiver' => $to,
-    'text' => $message,
-    'time' => $timestamp,
-];
-
-// Attempt to write to the file
-if (file_put_contents($messageFile, json_encode($messagesData, JSON_PRETTY_PRINT)) === false) {
-    echo json_encode(['status' => 'error', 'message' => 'Failed to write message']);
-    exit();
-}
-
-echo json_encode(['status' => 'success', 'message' => 'Message sent successfully']);
-?>
