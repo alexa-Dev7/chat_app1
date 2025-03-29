@@ -16,8 +16,7 @@ $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 try {
-    $dsn = "pgsql:host=$host;dbname=$dbname";
-    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
@@ -85,17 +84,20 @@ try {
         try {
             const response = await fetch(`load_chat.php?chatKey=${encodeURIComponent(chatKey)}`);
             const data = await response.json();
-            if (data.status === 'success') {
-                const chatBody = document.getElementById('chatBody');
-                chatBody.innerHTML = '';
-                data.messages.forEach(msg => {
-                    chatBody.innerHTML += `<div class='message'><b>${msg.sender}:</b> ${msg.text} <i>${msg.timestamp}</i></div>`;
-                });
+
+            if (data.status === 'error') {
+                console.error('Chat error:', data.message);
+                document.getElementById('chatBody').innerHTML = `<p class='error'>${data.message}</p>`;
             } else {
-                alert('Error loading chat: ' + data.message);
+                let messagesHTML = "";
+                data.messages.forEach(msg => {
+                    messagesHTML += `<div class='message'><b>${msg.sender}:</b> ${msg.text} <i>${msg.timestamp}</i></div>`;
+                });
+                document.getElementById('chatBody').innerHTML = messagesHTML;
             }
         } catch (error) {
-            console.error('Error loading chat:', error);
+            console.error('Invalid JSON response:', error);
+            document.getElementById('chatBody').innerHTML = "<p class='error'>Unexpected error occurred.</p>";
         }
     }
 
@@ -126,29 +128,6 @@ try {
     setInterval(() => {
         if (currentChatUser) loadChat(currentChatUser);
     }, 3000);
-
-    $.ajax({
-    url: "load_chat.php",
-    method: "GET",
-    success: function (response) {
-        try {
-            var data = JSON.parse(response); // ✅ Parse JSON safely
-            if (data.status === "error") {
-                console.error("Chat error:", data.message);
-                $("#chat-box").html("<p class='error'>" + data.message + "</p>");
-            } else {
-                $("#chat-box").html(data.messages);
-            }
-        } catch (e) {
-            console.error("Invalid JSON response:", response); // ✅ Debugging
-            $("#chat-box").html("<p class='error'>Unexpected error occurred.</p>");
-        }
-    },
-    error: function () {
-        $("#chat-box").html("<p class='error'>Failed to fetch messages.</p>");
-    }
-});
-
 </script>
 
 </body>
