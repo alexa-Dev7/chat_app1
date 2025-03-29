@@ -31,7 +31,7 @@ foreach ($messagesData as $chatKey => $messages) {
         $lastMessage = end($messages);
         $inbox[] = [
             'chatKey' => $chatKey,
-            'lastMessage' => $lastMessage['message'] ?? '',
+            'lastMessage' => $lastMessage['text'] ?? '',
             'timestamp' => $lastMessage['time'] ?? '',
             'receiver' => $lastMessage['receiver'] ?? '',
         ];
