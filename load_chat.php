@@ -14,6 +14,7 @@ $host = "dpg-cvgd5atrie7s73bog17g-a";
 $dbname = "pager_sivs"; 
 $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
+
 // Connect to PostgreSQL
 try {
     $dsn = "pgsql:host=$host;dbname=$dbname";
@@ -45,10 +46,19 @@ if ($sender_id && $recipient_id) {
     $stmt->execute(['sender_id' => $sender_id, 'recipient_id' => $recipient_id]);
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    echo json_encode([
-        'status' => 'success',
-        'messages' => $messages
-    ]);
+    // Check if messages exist, return a custom message when there are no messages
+    if (count($messages) === 0) {
+        echo json_encode([
+            'status' => 'success',
+            'messages' => [],
+            'message' => 'No messages yet. Start a new conversation!'
+        ]);
+    } else {
+        echo json_encode([
+            'status' => 'success',
+            'messages' => $messages
+        ]);
+    }
 } else {
     echo json_encode(["status" => "error", "message" => "Invalid chat"]);
 }
