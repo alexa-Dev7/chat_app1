@@ -1,16 +1,26 @@
 <?php
-$chatKey = $_GET['chatKey'] ?? '';
-$messageFile = 'chats/messages.json';
+// load_chat.php
+header('Content-Type: application/json');
 
-if (!$chatKey || !file_exists($messageFile)) {
-    echo json_encode(['status' => 'error', 'message' => 'Invalid chat key or messages file not found.']);
+if (!isset($_GET['chatKey'])) {
+    echo json_encode(['status' => 'error', 'message' => 'Chat key not provided']);
     exit();
 }
 
-// Load messages
-$messagesData = json_decode(file_get_contents($messageFile), true);
-if (isset($messagesData[$chatKey])) {
-    echo json_encode(['status' => 'success', 'messages' => $messagesData[$chatKey]]);
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Chat not found.']);
+$chatKey = $_GET['chatKey'];
+$messagesFile = 'chats/messages.json';
+
+$messagesData = [];
+if (file_exists($messagesFile)) {
+    $messagesData = json_decode(file_get_contents($messagesFile), true);
 }
+
+if (!isset($messagesData[$chatKey])) {
+    echo json_encode(['status' => 'error', 'message' => 'Chat not found']);
+    exit();
+}
+
+$messages = $messagesData[$chatKey];
+
+echo json_encode(['status' => 'success', 'messages' => $messages]);
+?>
