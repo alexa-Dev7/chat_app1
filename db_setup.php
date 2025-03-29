@@ -16,13 +16,15 @@ try {
 
     // Create or update the Messages table (sender and recipient are foreign keys referencing users(id))
     $pdo->exec("
-  CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
-    sender INT NOT NULL REFERENCES users(id),
-    recipient INT NOT NULL REFERENCES users(id),
+    sender VARCHAR(255) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+    recipient VARCHAR(255) NOT NULL REFERENCES users(username) ON DELETE CASCADE,
     text TEXT NOT NULL,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    read_status BOOLEAN DEFAULT FALSE
 );
+");
 
     // Create or update the Sessions table (used for session management)
     $pdo->exec("
