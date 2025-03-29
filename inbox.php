@@ -126,6 +126,29 @@ try {
     setInterval(() => {
         if (currentChatUser) loadChat(currentChatUser);
     }, 3000);
+
+    $.ajax({
+    url: "load_chat.php",
+    method: "GET",
+    success: function (response) {
+        try {
+            var data = JSON.parse(response); // ✅ Parse JSON safely
+            if (data.status === "error") {
+                console.error("Chat error:", data.message);
+                $("#chat-box").html("<p class='error'>" + data.message + "</p>");
+            } else {
+                $("#chat-box").html(data.messages);
+            }
+        } catch (e) {
+            console.error("Invalid JSON response:", response); // ✅ Debugging
+            $("#chat-box").html("<p class='error'>Unexpected error occurred.</p>");
+        }
+    },
+    error: function () {
+        $("#chat-box").html("<p class='error'>Failed to fetch messages.</p>");
+    }
+});
+
 </script>
 
 </body>
