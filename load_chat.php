@@ -27,7 +27,7 @@ try {
         exit();
     }
 
-    // ✅ Verify correct column names
+    // ✅ Verify existing column names in 'messages' table
     $stmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name = 'messages'");
     $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -37,7 +37,7 @@ try {
     $timestamp_col = in_array('timestamp', $columns) ? 'timestamp' : (in_array('sent_at', $columns) ? 'sent_at' : '');
 
     if (!$sender_col || !$receiver_col || !$text_col || !$timestamp_col) {
-        echo json_encode(["status" => "error", "message" => "One or more required columns are missing."]);
+        echo json_encode(["status" => "error", "message" => "Missing columns in messages table: " . implode(", ", array_diff(['sender', 'receiver', 'text', 'timestamp'], $columns))]);
         exit();
     }
 
