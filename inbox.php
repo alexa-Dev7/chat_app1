@@ -114,6 +114,8 @@ try {
 <!-- Toast Message -->
 <div id="toast" class="toast"></div>
 
+<!-- Include the rest of your HTML layout here -->
+
 <script>
     let currentChatUser = '';
 
@@ -170,39 +172,6 @@ try {
         }
     }
 
-    // Send a message
-    async function sendMessage(event) {
-        event.preventDefault();
-        const messageInput = document.getElementById('messageInput');
-        const message = messageInput.value;
-
-        try {
-            const response = await fetch('send_message.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`,
-            });
-
-            const text = await response.text();
-            try {
-                const data = JSON.parse(text);
-                if (data.status === 'success') {
-                    messageInput.value = '';
-                    loadChat(currentChatUser); // Reload chat after sending message
-                } else {
-                    alert(data.message);
-                }
-            } catch (jsonError) {
-                console.error("Invalid JSON response:", text);
-                alert("Error: Invalid JSON response from the server.");
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    }
-
     // Auto-refresh inbox
     setInterval(loadInbox, 3000);
 
@@ -211,7 +180,6 @@ try {
             const response = await fetch('load_inbox.php');
             const text = await response.text();
 
-            // Handle invalid response like HTML error page
             try {
                 const data = JSON.parse(text);
                 if (data.status === 'success') {
@@ -237,5 +205,8 @@ try {
     }
 </script>
 
+
 </body>
 </html>
+
+
