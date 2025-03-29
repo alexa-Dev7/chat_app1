@@ -32,7 +32,6 @@ try {
 } catch (PDOException $e) {
     die("Error fetching users: " . $e->getMessage());
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -153,7 +152,7 @@ try {
                         data.messages.forEach(message => {
                             const messageDiv = document.createElement('div');
                             messageDiv.className = 'message';
-                            messageDiv.innerText = `${message.sender}: ${message.message} (${message.time})`;
+                            messageDiv.innerText = `${message.sender}: ${message.text} (${message.time})`;
                             chatBody.appendChild(messageDiv);
                         });
                     }
