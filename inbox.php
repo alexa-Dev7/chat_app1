@@ -16,9 +16,18 @@ $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 try {
-    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $dsn = "pgsql:host=$host;dbname=$dbname";
+    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
+}
+
+// Verify if the 'messages' table exists before fetching chat
+$stmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+$tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+if (!in_array('messages', $tables)) {
+    die("❌ Chat error: Messages table does not exist or database connection failed.");
 }
 
 // Fetch all registered users except the logged-in user
@@ -84,20 +93,17 @@ try {
         try {
             const response = await fetch(`load_chat.php?chatKey=${encodeURIComponent(chatKey)}`);
             const data = await response.json();
-
-            if (data.status === 'error') {
-                console.error('Chat error:', data.message);
-                document.getElementById('chatBody').innerHTML = `<p class='error'>${data.message}</p>`;
-            } else {
-                let messagesHTML = "";
+            if (data.status === 'success') {
+                const chatBody = document.getElementById('chatBody');
+                chatBody.innerHTML = '';
                 data.messages.forEach(msg => {
-                    messagesHTML += `<div class='message'><b>${msg.sender}:</b> ${msg.text} <i>${msg.timestamp}</i></div>`;
+                    chatBody.innerHTML += `<div class='message'><b>${msg.sender}:</b> ${msg.text} <i>${msg.timestamp}</i></div>`;
                 });
-                document.getElementById('chatBody').innerHTML = messagesHTML;
+            } else {
+                alert('Error loading chat: ' + data.message);
             }
         } catch (error) {
-            console.error('Invalid JSON response:', error);
-            document.getElementById('chatBody').innerHTML = "<p class='error'>Unexpected error occurred.</p>";
+            console.error('Error loading chat:', error);
         }
     }
 
