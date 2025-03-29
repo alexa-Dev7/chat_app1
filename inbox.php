@@ -43,6 +43,39 @@ try {
     <title>Inbox | Messenger</title>
     <link rel="stylesheet" href="assets/styles.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* Simple Toast Style */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+        }
+
+        .toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+
+        @keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+    </style>
 </head>
 
 <body>
@@ -79,33 +112,34 @@ try {
     </div>
 </div>
 
+<!-- Toast Message -->
+<div id="toast" class="toast"></div>
+
 <script>
     let currentChatUser = '';
 
-    // Open a chat with a selected user
-    $(document).on('click', '.chat-item', function() {
-        currentChatUser = $(this).data('chat-key').split('-')[1];
-        document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
-        document.getElementById('chatWindow').style.display = 'block';
-        loadChat($(this).data('chat-key'));
-    });
+    // Function to show toast message
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.innerText = message;
+        toast.className = "toast show";
+        setTimeout(function() { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
 
+    // Open a chat with a selected user
     $(document).on('click', '.user-item', function() {
         currentChatUser = $(this).data('username');
         document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
         document.getElementById('chatWindow').style.display = 'block';
-        loadChat(currentChatUser); // Use the username directly as chat key
+        loadChat(currentChatUser);
     });
 
     // Load chat messages
     async function loadChat(chatKey) {
         try {
             const response = await fetch(`load_chat.php?chatKey=${encodeURIComponent(chatKey)}`);
-
-            // Check if the response was valid
             const text = await response.text();
             try {
-                // Parse the response as JSON
                 const data = JSON.parse(text);
 
                 if (data.status === 'success') {
@@ -113,7 +147,8 @@ try {
                     chatBody.innerHTML = '';
 
                     if (data.messages.length === 0) {
-                        chatBody.innerHTML = "<p>No messages found.</p>";
+                        showToast("Start a new message!");
+                        chatBody.innerHTML = "<p>No chats available. Start a new message!</p>";
                     } else {
                         data.messages.forEach(message => {
                             const messageDiv = document.createElement('div');
@@ -127,7 +162,6 @@ try {
                     alert(data.message);
                 }
             } catch (jsonError) {
-                // Handle unexpected content like HTML errors in response
                 console.error("Invalid JSON response:", text);
                 alert("Error: Invalid JSON response from the server.");
             }
@@ -184,6 +218,9 @@ try {
                 if (data.status === 'success') {
                     const inboxContainer = document.getElementById('inbox');
                     inboxContainer.innerHTML = '';
+                    if (data.inbox.length === 0) {
+                        showToast("No chats found. Start a new message!");
+                    }
                     data.inbox.forEach(chat => {
                         const chatItem = document.createElement('div');
                         chatItem.className = 'chat-item';
