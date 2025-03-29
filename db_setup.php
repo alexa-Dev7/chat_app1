@@ -3,7 +3,7 @@
 require 'db_connect.php';
 
 try {
-    // ✅ Create Users table
+    // Create or update the Users table
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -14,12 +14,12 @@ try {
         )
     ");
 
-    // ✅ Create Messages table (use INT for sender and recipient for foreign keys)
+    // Create or update the Messages table (sender and recipient are foreign keys referencing users(id))
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS messages (
             id SERIAL PRIMARY KEY,
-            sender INT NOT NULL,  -- Changed to INT to reference users(id)
-            recipient INT NOT NULL,  -- Changed to INT to reference users(id)
+            sender INT NOT NULL,  -- References users(id)
+            recipient INT NOT NULL,  -- References users(id)
             text TEXT NOT NULL,
             aes_key TEXT DEFAULT '',
             iv TEXT DEFAULT '',
@@ -29,7 +29,7 @@ try {
         )
     ");
 
-    // ✅ Create Sessions table (linked to users)
+    // Create or update the Sessions table (used for session management)
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS sessions (
             id SERIAL PRIMARY KEY,
@@ -41,7 +41,20 @@ try {
         )
     ");
 
-    echo "✅ Database setup complete!";
+    // Optionally update tables to handle changes in case they already exist
+    // Example: ALTER table columns if needed (e.g., add or modify fields).
+    $pdo->exec("
+        ALTER TABLE IF EXISTS users
+        ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
+    ");
+
+    $pdo->exec("
+        ALTER TABLE IF EXISTS messages
+        ADD COLUMN IF NOT EXISTS read_status BOOLEAN DEFAULT FALSE;
+    ");
+
+    echo "✅ Database setup and update complete!";
 } catch (PDOException $e) {
-    die("❌ Database setup failed: " . $e->getMessage());
+    die("❌ Database setup/update failed: " . $e->getMessage());
 }
+?>
