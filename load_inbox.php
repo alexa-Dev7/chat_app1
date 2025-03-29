@@ -3,6 +3,7 @@
 header('Content-Type: application/json');
 
 session_start();
+
 if (!isset($_SESSION['username'])) {
     echo json_encode(['status' => 'error', 'message' => 'User not logged in']);
     exit();
