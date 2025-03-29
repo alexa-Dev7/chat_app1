@@ -1,6 +1,7 @@
-<?php
+<?php 
 session_start();
 
+// Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
@@ -8,12 +9,13 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username']; // Logged-in user
 
-// Database connection
-$host = "dpg-cvgd5atrie7s73bog17g-a";
-$dbname = "pager_sivs";
+// PostgreSQL Database Credentials
+$host = "dpg-cvgd5atrie7s73bog17g-a"; // e.g., "localhost"
+$dbname = "pager_sivs"; // e.g., "pager_sivs"
 $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
+// Connect to PostgreSQL
 try {
     $dsn = "pgsql:host=$host;dbname=$dbname";
     $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
@@ -21,29 +23,7 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
-$messageFile = 'chats/messages.json';
-
-// Get messages from the file
-$messagesData = [];
-if (file_exists($messageFile)) {
-    $jsonData = file_get_contents($messageFile);
-    $messagesData = json_decode($jsonData, true);
-}
-
-$inbox = [];
-foreach ($messagesData as $chatKey => $messages) {
-    if (strpos($chatKey, $username) !== false) {
-        $lastMessage = end($messages);
-        $inbox[] = [
-            'chatKey' => $chatKey,
-            'lastMessage' => $lastMessage['text'] ?? '',
-            'timestamp' => $lastMessage['time'] ?? '',
-            'receiver' => $lastMessage['receiver'] ?? '',
-        ];
-    }
-}
-
-// Get all users
+// Fetch all registered users from PostgreSQL
 $users = [];
 try {
     $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
@@ -52,6 +32,7 @@ try {
 } catch (PDOException $e) {
     die("Error fetching users: " . $e->getMessage());
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -72,12 +53,7 @@ try {
         <h2>👤 <?= htmlspecialchars($username) ?> <a href="logout.php">Logout</a></h2>
         <h3>Inbox</h3>
         <div id="inbox">
-            <?php foreach ($inbox as $chat): ?>
-                <div class="chat-item" data-chat-key="<?= htmlspecialchars($chat['chatKey']) ?>">
-                    <strong><?= htmlspecialchars($chat['receiver']) ?></strong>: <?= htmlspecialchars($chat['lastMessage']) ?> <br>
-                    <small><?= htmlspecialchars($chat['timestamp']) ?></small>
-                </div>
-            <?php endforeach; ?>
+            <!-- Inbox content will be dynamically loaded here -->
         </div>
 
         <h3>All Users</h3>
@@ -106,7 +82,7 @@ try {
 <script>
     let currentChatUser = '';
 
-    // Open chat with a selected user
+    // Open a chat with a selected user
     $(document).on('click', '.chat-item', function() {
         currentChatUser = $(this).data('chat-key').split('-')[1];
         document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
@@ -125,24 +101,35 @@ try {
     async function loadChat(chatKey) {
         try {
             const response = await fetch(`load_chat.php?chatKey=${encodeURIComponent(chatKey)}`);
-            const data = await response.json();
 
-            if (data.status === 'success') {
-                const chatBody = document.getElementById('chatBody');
-                chatBody.innerHTML = '';
-                if (data.messages.length === 0) {
-                    chatBody.innerHTML = "<p>No messages found.</p>";
+            // Check if the response was valid
+            const text = await response.text();
+            try {
+                // Parse the response as JSON
+                const data = JSON.parse(text);
+
+                if (data.status === 'success') {
+                    const chatBody = document.getElementById('chatBody');
+                    chatBody.innerHTML = '';
+
+                    if (data.messages.length === 0) {
+                        chatBody.innerHTML = "<p>No messages found.</p>";
+                    } else {
+                        data.messages.forEach(message => {
+                            const messageDiv = document.createElement('div');
+                            messageDiv.className = 'message';
+                            messageDiv.innerText = `${message.sender}: ${message.message} (${message.time})`;
+                            chatBody.appendChild(messageDiv);
+                        });
+                    }
                 } else {
-                    data.messages.forEach(message => {
-                        const messageDiv = document.createElement('div');
-                        messageDiv.className = 'message';
-                        messageDiv.innerText = `${message.sender}: ${message.text} (${message.time})`;
-                        chatBody.appendChild(messageDiv);
-                    });
+                    console.error('Chat Error:', data.message);
+                    alert(data.message);
                 }
-            } else {
-                console.error('Chat Error:', data.message);
-                alert(data.message);
+            } catch (jsonError) {
+                // Handle unexpected content like HTML errors in response
+                console.error("Invalid JSON response:", text);
+                alert("Error: Invalid JSON response from the server.");
             }
         } catch (error) {
             console.error('Error loading chat:', error);
@@ -165,36 +152,48 @@ try {
                 body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`,
             });
 
-            const data = await response.json();
-            if (data.status === 'success') {
-                messageInput.value = '';
-                loadChat(currentChatUser);
-            } else {
-                alert(data.message);
+            const text = await response.text();
+            try {
+                const data = JSON.parse(text);
+                if (data.status === 'success') {
+                    messageInput.value = '';
+                    loadChat(currentChatUser);
+                } else {
+                    alert(data.message);
+                }
+            } catch (jsonError) {
+                console.error("Invalid JSON response:", text);
+                alert("Error: Invalid JSON response from the server.");
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Error sending message. Please try again.');
         }
     }
 
-    // Auto-refresh inbox
+    // Auto-refresh chat
     setInterval(loadInbox, 3000);
 
     async function loadInbox() {
         try {
             const response = await fetch('load_inbox.php');
-            const data = await response.json();
-            if (data.status === 'success') {
-                const inboxContainer = document.getElementById('inbox');
-                inboxContainer.innerHTML = '';
-                data.inbox.forEach(chat => {
-                    const chatItem = document.createElement('div');
-                    chatItem.className = 'chat-item';
-                    chatItem.dataset.chatKey = chat.chatKey;
-                    chatItem.innerHTML = `<strong>${chat.receiver}</strong>: ${chat.lastMessage} <br><small>${chat.timestamp}</small>`;
-                    inboxContainer.appendChild(chatItem);
-                });
+            const text = await response.text();
+
+            // Handle invalid response like HTML error page
+            try {
+                const data = JSON.parse(text);
+                if (data.status === 'success') {
+                    const inboxContainer = document.getElementById('inbox');
+                    inboxContainer.innerHTML = '';
+                    data.inbox.forEach(chat => {
+                        const chatItem = document.createElement('div');
+                        chatItem.className = 'chat-item';
+                        chatItem.dataset.chatKey = chat.chatKey;
+                        chatItem.innerHTML = `<strong>${chat.receiver}</strong>: ${chat.lastMessage} <br><small>${chat.timestamp}</small>`;
+                        inboxContainer.appendChild(chatItem);
+                    });
+                }
+            } catch (jsonError) {
+                console.error("Inbox JSON Error:", text);
             }
         } catch (error) {
             console.error('Error loading inbox:', error);
