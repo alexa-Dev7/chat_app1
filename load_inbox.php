@@ -1,43 +1,65 @@
 <?php
 session_start();
+require 'db_connect.php';
 
 // Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(['status' => 'error', 'message' => 'User not logged in']);
+    echo json_encode(["status" => "error", "message" => "You must be logged in"]);
     exit();
 }
 
-$username = $_SESSION['username']; // Logged-in user
+$username = $_SESSION['username'];  // Logged-in user
 
-// Path to the JSON file where messages are stored
-$messageFile = 'chats/messages.json';
-
-if (file_exists($messageFile)) {
-    $jsonData = file_get_contents($messageFile);
-    $messagesData = json_decode($jsonData, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        echo json_encode(['status' => 'error', 'message' => 'Error reading chat data']);
+// Fetch user ID
+try {
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
+    $stmt->execute(['username' => $username]);
+    $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$userData) {
+        echo json_encode(["status" => "error", "message" => "User not found"]);
         exit();
     }
-} else {
-    echo json_encode(['status' => 'error', 'message' => 'Chat data file not found']);
-    exit();
-}
 
-// Prepare the inbox data
-$inbox = [];
-foreach ($messagesData as $chatKey => $messages) {
-    if (strpos($chatKey, $username) !== false) {
-        $lastMessage = end($messages);
-        $inbox[] = [
-            'chatKey' => $chatKey,
-            'lastMessage' => $lastMessage['text'] ?? '',
-            'timestamp' => $lastMessage['time'] ?? '',
-            'receiver' => $lastMessage['receiver'] ?? '',
+    $userId = $userData['id'];
+
+    // Query to get the latest messages between the user and others
+    $stmt = $pdo->prepare("
+        SELECT 
+            CASE 
+                WHEN sender = :userId THEN recipient 
+                ELSE sender 
+            END AS chatUser,
+            messages.text AS lastMessage,
+            messages.timestamp 
+        FROM messages 
+        WHERE sender = :userId OR recipient = :userId
+        ORDER BY messages.timestamp DESC
+    ");
+    $stmt->execute(['userId' => $userId]);
+
+    $inbox = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Prepare response
+    $response = [
+        'status' => 'success',
+        'inbox' => []
+    ];
+
+    foreach ($inbox as $chat) {
+        // Get the username of the chat partner
+        $stmt = $pdo->prepare("SELECT username FROM users WHERE id = :userId");
+        $stmt->execute(['userId' => $chat['chatUser']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $response['inbox'][] = [
+            'chatKey' => $user['username'],
+            'lastMessage' => $chat['lastMessage'],
+            'timestamp' => $chat['timestamp']
         ];
     }
-}
 
-// Return the inbox data
-echo json_encode(['status' => 'success', 'inbox' => $inbox]);
-?>
+    echo json_encode($response);
+} catch (PDOException $e) {
+    echo json_encode(["status" => "error", "message" => "Failed to load inbox: " . $e->getMessage()]);
+}
