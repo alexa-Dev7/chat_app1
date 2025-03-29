@@ -1,63 +1,54 @@
 <?php
 session_start();
 
-// Check if the user is logged in
 if (!isset($_SESSION['username'])) {
-    echo json_encode(["status" => "error", "message" => "You must be logged in to view chat"]);
+    echo json_encode(["status" => "error", "message" => "User not logged in."]);
     exit();
 }
 
-$username = $_SESSION['username']; // Logged-in user
+$username = $_SESSION['username'];
 
-// Database connection details
-$host = "dpg-cvgd5atrie7s73bog17g-a";
-$dbname = "pager_sivs";
+// PostgreSQL Credentials
+$host = "dpg-cvgd5atrie7s73bog17g-a"; 
+$dbname = "pager_sivs"; 
 $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
-// Connect to PostgreSQL
 try {
-    $dsn = "pgsql:host=$host;dbname=$dbname";
-    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 } catch (PDOException $e) {
-    echo json_encode(["status" => "error", "message" => "Database connection failed: " . $e->getMessage()]);
+    echo json_encode(["status" => "error", "message" => "Database connection failed."]);
     exit();
 }
 
-// Check if chatKey (recipient username) is provided
-if (!isset($_GET['chatKey'])) {
-    echo json_encode(["status" => "error", "message" => "Chat not found"]);
+// 🛠️ Check if 'messages' table exists before querying
+$tableCheck = $pdo->query("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages')");
+$tableExists = $tableCheck->fetchColumn();
+
+if (!$tableExists) {
+    echo json_encode(["status" => "error", "message" => "Messages table does not exist."]);
     exit();
 }
 
-$chatKey = $_GET['chatKey']; // Recipient username
+// 🛠️ Validate and sanitize input
+if (!isset($_GET['chatKey']) || empty($_GET['chatKey'])) {
+    echo json_encode(["status" => "error", "message" => "Chat key is missing."]);
+    exit();
+}
 
-// Retrieve sender's user ID
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
-$stmt->execute(['username' => $username]);
-$sender_id = $stmt->fetchColumn();
+$chatKey = $_GET['chatKey'];
 
-// Retrieve recipient's user ID
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = :username");
-$stmt->execute(['username' => $chatKey]);
-$recipient_id = $stmt->fetchColumn();
+try {
+    $stmt = $pdo->prepare("SELECT text, timestamp, sender FROM messages WHERE 
+        (sender = :username AND recipient = :chatKey) OR 
+        (sender = :chatKey AND recipient = :username) 
+        ORDER BY timestamp ASC");
 
-// Check if both users exist in the database
-if ($sender_id && $recipient_id) {
-    // Fetch messages between the two users
-    $stmt = $pdo->prepare("
-        SELECT m.text, m.timestamp, u.username as sender 
-        FROM messages m
-        JOIN users u ON u.id = m.sender
-        WHERE (m.sender = :sender_id AND m.recipient = :recipient_id)
-           OR (m.sender = :recipient_id AND m.recipient = :sender_id)
-        ORDER BY m.timestamp ASC
-    ");
-    $stmt->execute(['sender_id' => $sender_id, 'recipient_id' => $recipient_id]);
+    $stmt->execute(['username' => $username, 'chatKey' => $chatKey]);
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Return the chat messages
     echo json_encode(["status" => "success", "messages" => $messages]);
-} else {
-    echo json_encode(["status" => "error", "message" => "Invalid chat"]);
+} catch (PDOException $e) {
+    echo json_encode(["status" => "error", "message" => "Database query failed: " . $e->getMessage()]);
 }
+?>
