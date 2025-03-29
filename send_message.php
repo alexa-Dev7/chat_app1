@@ -19,11 +19,6 @@ if (empty($message) || empty($to)) {
 // Path to the messages file
 $messageFile = 'chats/messages.json';
 
-// Try changing file permissions to writable if it's not writable
-if (!is_writable($messageFile)) {
-    chmod($messageFile, 0666);  // Set file to be writable by everyone
-}
-
 // Fetch existing messages
 $messagesData = [];
 if (file_exists($messageFile)) {
