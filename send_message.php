@@ -19,7 +19,16 @@ if (empty($message) || empty($to)) {
 // Path to the messages file
 $messageFile = 'chats/messages.json';
 
-// Fetch existing messages if the file exists
+// Ensure the file is writable by setting permissions if it's not
+if (!is_writable($messageFile)) {
+    chmod($messageFile, 0666); // Attempt to make the file writable (read and write permissions for all)
+    if (!is_writable($messageFile)) {
+        echo json_encode(['status' => 'error', 'message' => 'Failed to make the message file writable']);
+        exit();
+    }
+}
+
+// Fetch existing messages
 $messagesData = [];
 if (file_exists($messageFile)) {
     $jsonData = file_get_contents($messageFile);
@@ -32,7 +41,7 @@ if (file_exists($messageFile)) {
 // Generate chat key
 $chatKey = (strcmp($username, $to) < 0) ? $username . '-' . $to : $to . '-' . $username;
 
-// Add new message to the appropriate chat
+// Add new message
 $timestamp = date('Y-m-d H:i:s');
 $messagesData[$chatKey][] = [
     'sender' => $username,
