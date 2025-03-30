@@ -18,7 +18,7 @@ try {
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
 
-    // Ensure messages table exists
+    // Check if 'messages' table exists
     $stmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
@@ -27,7 +27,7 @@ try {
         exit();
     }
 
-    // Verify column names
+    // ✅ Verify existing column names in 'messages' table
     $stmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_name = 'messages'");
     $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -37,33 +37,24 @@ try {
     $timestamp_col = in_array('timestamp', $columns) ? 'timestamp' : (in_array('sent_at', $columns) ? 'sent_at' : '');
 
     if (!$sender_col || !$receiver_col || !$text_col || !$timestamp_col) {
-        echo json_encode(["status" => "error", "message" => "Missing columns in messages table"]);
+        echo json_encode(["status" => "error", "message" => "Missing columns in messages table: " . implode(", ", array_diff(['sender', 'receiver', 'text', 'timestamp'], $columns))]);
         exit();
     }
 
-    $current_user = $_SESSION['username']; // Get logged-in user
-    $chat_partner = $_GET['chat_partner'] ?? '';
-
-    if (empty($chat_partner)) {
-        echo json_encode(["status" => "error", "message" => "No chat partner provided."]);
+    $chatKey = $_GET['chatKey'] ?? '';
+    if (empty($chatKey)) {
+        echo json_encode(["status" => "error", "message" => "No chatKey provided."]);
         exit();
     }
 
-    // ✅ Only fetch messages where the logged-in user is sender OR receiver
-    $query = "SELECT $sender_col AS sender, $receiver_col AS receiver, $text_col AS text, $timestamp_col AS timestamp 
+    // ✅ Use correct column names dynamically
+    $query = "SELECT $sender_col AS sender, $text_col AS text, $timestamp_col AS timestamp 
               FROM messages 
-              WHERE 
-                  ($sender_col = :current_user AND $receiver_col = :chat_partner) 
-                  OR 
-                  ($sender_col = :chat_partner AND $receiver_col = :current_user)
+              WHERE $receiver_col = :chatKey OR $sender_col = :chatKey 
               ORDER BY $timestamp_col ASC";
 
     $stmt = $pdo->prepare($query);
-    $stmt->execute([
-        'current_user' => $current_user,
-        'chat_partner' => $chat_partner
-    ]);
-
+    $stmt->execute(['chatKey' => $chatKey]);
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode(["status" => "success", "messages" => $messages]);
