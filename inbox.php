@@ -82,6 +82,7 @@ try {
 
 <script>
     let currentChatUser = '';
+    let unreadMessages = 0;
 
     $(document).on('click', '.user-item', function() {
         currentChatUser = $(this).data('username');
@@ -113,6 +114,8 @@ try {
                 });
 
                 chatBody.scrollTop = chatBody.scrollHeight;
+                unreadMessages = 0; // Reset unread count when user views chat
+                updateTabTitle();
             } else {
                 alert('Error loading chat: ' + data.message);
             }
@@ -121,33 +124,29 @@ try {
         }
     }
 
-    async function sendMessage(event) {
-        event.preventDefault();
-        const messageInput = document.getElementById('messageInput');
-        const message = messageInput.value;
-
+    async function checkNewMessages() {
         try {
-            const response = await fetch('send_message.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `to=${encodeURIComponent(currentChatUser)}&message=${encodeURIComponent(message)}`
-            });
-
+            const response = await fetch('check_messages.php'); // PHP script to count unread messages
             const data = await response.json();
+
             if (data.status === 'success') {
-                messageInput.value = '';
-                loadChat(currentChatUser);
-            } else {
-                alert('Error sending message: ' + data.message);
+                unreadMessages = data.unread; // Update unread count
+                updateTabTitle();
             }
         } catch (error) {
-            console.error('Error sending message:', error);
+            console.error('Error checking messages:', error);
         }
     }
 
-    setInterval(() => {
-        if (currentChatUser) loadChat(currentChatUser);
-    }, 3000);
+    function updateTabTitle() {
+        if (unreadMessages > 0) {
+            document.title = `🔴 (${unreadMessages}) New Messages - Sender`;
+        } else {
+            document.title = `Inbox | Messenger`;
+        }
+    }
+
+    setInterval(checkNewMessages, 1000); // Check new messages every second
 </script>
 
 </body>
