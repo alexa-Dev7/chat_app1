@@ -1,4 +1,4 @@
-update the login page and actually its index.php page not login.php page : <?php
+<?php
 session_start();
 
 // Database connection setup
