@@ -1,5 +1,6 @@
 <?php
 session_start();
+header('Content-Type: application/json');
 
 // PostgreSQL Database Credentials
 $host = "dpg-cvgd5atrie7s73bog17g-a";
@@ -14,24 +15,29 @@ if (!isset($_SESSION['username'])) {
 
 $sender = $_SESSION['username'];
 $receiver = $_POST['to'] ?? '';
-$message = $_POST['message'] ?? '';
+$message = trim($_POST['message'] ?? '');
 
 if (empty($receiver) || empty($message)) {
     die(json_encode(["status" => "error", "message" => "Receiver and message cannot be empty."]));
 }
 
-try {
-    $dsn = "pgsql:host=$host;dbname=$dbname";
-    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+if ($sender === $receiver) {
+    die(json_encode(["status" => "error", "message" => "You cannot message yourself."]));
+}
 
-    // Check if 'receiver' exists in users table
+try {
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
+
+    // ✅ Check if receiver exists
     $stmt = $pdo->prepare("SELECT username FROM users WHERE username = :receiver");
     $stmt->execute(['receiver' => $receiver]);
     if (!$stmt->fetch()) {
-        die(json_encode(["status" => "error", "message" => "Receiver does not exist in users table."]));
+        die(json_encode(["status" => "error", "message" => "Receiver does not exist."]));
     }
 
-    // Insert message
+    // ✅ Insert message into database
     $stmt = $pdo->prepare("INSERT INTO messages (sender, receiver, text, timestamp) VALUES (:sender, :receiver, :text, NOW())");
     $stmt->execute([
         'sender' => $sender,
@@ -39,7 +45,7 @@ try {
         'text' => $message
     ]);
 
-    echo json_encode(["status" => "success", "message" => "Message sent."]);
+    echo json_encode(["status" => "success", "message" => "Message sent successfully."]);
 
 } catch (PDOException $e) {
     die(json_encode(["status" => "error", "message" => "Database error: " . $e->getMessage()]));
