@@ -2,7 +2,7 @@
 session_start();
 
 // Redirect non-admins to login page
-if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
+if (!isset($_SESSION['admin_username']) || $_SESSION['admin_username'] !== 'Trishit7') {
     header("Location: login.php");
     exit();
 }
@@ -21,7 +21,7 @@ try {
 }
 
 // Fetch all users
-$stmt = $pdo->query("SELECT id, username, email, role FROM users");
+$stmt = $pdo->query("SELECT id, username, email FROM users");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -35,14 +35,13 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </head>
 <body>
     <h2>Admin Panel</h2>
-    <h3>Welcome, <?= htmlspecialchars($_SESSION['username']) ?>! <a href="logout.php">Logout</a></h3>
+    <h3>Welcome, <?= htmlspecialchars($_SESSION['admin_username']) ?>! <a href="logout.php">Logout</a></h3>
 
     <table border="1">
         <tr>
             <th>ID</th>
             <th>Username</th>
             <th>Email</th>
-            <th>Role</th>
             <th>Actions</th>
         </tr>
         <?php foreach ($users as $user): ?>
@@ -50,9 +49,8 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <td><?= htmlspecialchars($user['id']) ?></td>
                 <td><?= htmlspecialchars($user['username']) ?></td>
                 <td><?= htmlspecialchars($user['email']) ?></td>
-                <td><?= htmlspecialchars($user['role']) ?></td>
                 <td>
-                    <?php if ($user['role'] !== 'admin'): ?>
+                    <?php if ($user['username'] !== 'Trishit7'): ?>
                         <a href="admin_actions.php?action=delete&id=<?= $user['id'] ?>">Delete</a> |
                         <a href="admin_actions.php?action=suspend&id=<?= $user['id'] ?>">Suspend</a>
                     <?php else: ?>
