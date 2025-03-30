@@ -1,6 +1,11 @@
 <?php
 session_start();
 
+// Enable error reporting for debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Database connection setup
 $host = "dpg-cvgd5atrie7s73bog17g-a";
 $dbname = "pager_sivs";
@@ -37,12 +42,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($user && password_verify($password, $user['password'])) {
             $_SESSION['username'] = $username;
-
-            // Redirect "Trishit7" to admin.php
+            session_regenerate_id(true); // Ensure session security
+            
+            // Admin check
             if ($username === 'Trishit7') {
-                header('Location: admin.php');
+                header('Location: admin.php'); // Redirect to admin panel
             } else {
-                header('Location: inbox.php');
+                header('Location: inbox.php'); // Redirect normal users
             }
             exit();
         } else {
