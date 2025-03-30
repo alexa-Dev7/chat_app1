@@ -22,14 +22,6 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Verify if the 'messages' table exists before fetching chat
-$stmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
-$tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-if (!in_array('messages', $tables)) {
-    die("❌ Chat error: Messages table does not exist or database connection failed.");
-}
-
 // Fetch all registered users except the logged-in user
 $users = [];
 try {
@@ -82,6 +74,7 @@ try {
 
 <script>
     let currentChatUser = '';
+    let unreadMessages = 0;
 
     $(document).on('click', '.user-item', function() {
         currentChatUser = $(this).data('username');
@@ -113,6 +106,8 @@ try {
                 });
 
                 chatBody.scrollTop = chatBody.scrollHeight;
+                unreadMessages = 0; // Reset unread count when user views chat
+                updateTabTitle();
             } else {
                 alert('Error loading chat: ' + data.message);
             }
@@ -145,9 +140,29 @@ try {
         }
     }
 
-    setInterval(() => {
-        if (currentChatUser) loadChat(currentChatUser);
-    }, 3000);
+    async function checkNewMessages() {
+        try {
+            const response = await fetch('check_messages.php'); // PHP script to count unread messages
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                unreadMessages = data.unread; // Update unread count
+                updateTabTitle();
+            }
+        } catch (error) {
+            console.error('Error checking messages:', error);
+        }
+    }
+
+    function updateTabTitle() {
+        if (unreadMessages > 0) {
+            document.title = `🔴 (${unreadMessages}) New Messages - Sender`;
+        } else {
+            document.title = `Inbox | Messenger`;
+        }
+    }
+
+    setInterval(checkNewMessages, 1000); // Check new messages every second
 </script>
 
 </body>
