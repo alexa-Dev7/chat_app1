@@ -8,6 +8,8 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
+$loggedInUser = $_SESSION['username'];
+
 $host = "dpg-cvgd5atrie7s73bog17g-a";
 $dbname = "pager_sivs";
 $user = "pager_sivs_user";
@@ -21,7 +23,7 @@ try {
     // Check if 'messages' table exists
     $stmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
     $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
+
     if (!in_array('messages', $tables)) {
         echo json_encode(["status" => "error", "message" => "Messages table does not exist."]);
         exit();
@@ -37,24 +39,29 @@ try {
     $timestamp_col = in_array('timestamp', $columns) ? 'timestamp' : (in_array('sent_at', $columns) ? 'sent_at' : '');
 
     if (!$sender_col || !$receiver_col || !$text_col || !$timestamp_col) {
-        echo json_encode(["status" => "error", "message" => "Missing columns in messages table: " . implode(", ", array_diff(['sender', 'receiver', 'text', 'timestamp'], $columns))]);
+        echo json_encode(["status" => "error", "message" => "Missing columns in messages table."]);
         exit();
     }
 
-    $chatKey = $_GET['chatKey'] ?? '';
+    // ✅ Fix: Ensure chatKey is correctly retrieved from GET or POST
+    $chatKey = $_GET['chatKey'] ?? $_POST['chatKey'] ?? '';
     if (empty($chatKey)) {
-        echo json_encode(["status" => "error", "message" => "No chatKey provided."]);
+        echo json_encode(["status" => "error", "message" => "No chat partner provided."]);
         exit();
     }
 
-    // ✅ Use correct column names dynamically
-    $query = "SELECT $sender_col AS sender, $text_col AS text, $timestamp_col AS timestamp 
+    // ✅ Secure Query: Fetch only messages between logged-in user & selected chat partner
+    $query = "SELECT $sender_col AS sender, $receiver_col AS receiver, $text_col AS text, $timestamp_col AS timestamp 
               FROM messages 
-              WHERE $receiver_col = :chatKey OR $sender_col = :chatKey 
+              WHERE ($sender_col = :loggedInUser AND $receiver_col = :chatKey) 
+                 OR ($sender_col = :chatKey AND $receiver_col = :loggedInUser) 
               ORDER BY $timestamp_col ASC";
 
     $stmt = $pdo->prepare($query);
-    $stmt->execute(['chatKey' => $chatKey]);
+    $stmt->execute([
+        'loggedInUser' => $loggedInUser,
+        'chatKey' => $chatKey
+    ]);
     $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode(["status" => "success", "messages" => $messages]);
