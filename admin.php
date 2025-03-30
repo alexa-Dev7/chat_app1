@@ -1,8 +1,8 @@
 <?php
 session_start();
 
-// Ensure admin is logged in
-if (!isset($_SESSION['admin'])) {
+// Redirect non-admins to login page
+if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
     header("Location: login.php");
     exit();
 }
@@ -21,12 +21,8 @@ try {
 }
 
 // Fetch all users
-try {
-    $stmt = $pdo->query("SELECT id, username, email, status FROM users");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Error fetching users: " . $e->getMessage());
-}
+$stmt = $pdo->query("SELECT id, username, email, role FROM users");
+$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -34,40 +30,37 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - User Management</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto p-6">
-        <h1 class="text-3xl font-bold mb-4">User Management</h1>
-        <table class="min-w-full bg-white shadow-md rounded">
-            <thead>
-                <tr class="bg-gray-800 text-white">
-                    <th class="py-2 px-4">ID</th>
-                    <th class="py-2 px-4">Username</th>
-                    <th class="py-2 px-4">Email</th>
-                    <th class="py-2 px-4">Status</th>
-                    <th class="py-2 px-4">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($users as $user): ?>
-                <tr class="border-b">
-                    <td class="py-2 px-4"><?= htmlspecialchars($user['id']) ?></td>
-                    <td class="py-2 px-4"><?= htmlspecialchars($user['username']) ?></td>
-                    <td class="py-2 px-4"><?= htmlspecialchars($user['email']) ?></td>
-                    <td class="py-2 px-4"><?= htmlspecialchars($user['status']) ?></td>
-                    <td class="py-2 px-4">
-                        <form action="manage_user.php" method="POST" class="inline">
-                            <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
-                            <button name="suspend" class="bg-yellow-500 text-white px-3 py-1 rounded">Suspend</button>
-                            <button name="delete" class="bg-red-600 text-white px-3 py-1 rounded">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+<body>
+    <h2>Admin Panel</h2>
+    <h3>Welcome, <?= htmlspecialchars($_SESSION['username']) ?>! <a href="logout.php">Logout</a></h3>
+
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Actions</th>
+        </tr>
+        <?php foreach ($users as $user): ?>
+            <tr>
+                <td><?= htmlspecialchars($user['id']) ?></td>
+                <td><?= htmlspecialchars($user['username']) ?></td>
+                <td><?= htmlspecialchars($user['email']) ?></td>
+                <td><?= htmlspecialchars($user['role']) ?></td>
+                <td>
+                    <?php if ($user['role'] !== 'admin'): ?>
+                        <a href="admin_actions.php?action=delete&id=<?= $user['id'] ?>">Delete</a> |
+                        <a href="admin_actions.php?action=suspend&id=<?= $user['id'] ?>">Suspend</a>
+                    <?php else: ?>
+                        Admin
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+    </table>
 </body>
 </html>
