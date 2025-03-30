@@ -8,8 +8,17 @@ $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 try {
-    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+
+    // Ensure the users table has the 'role' column
+    $pdo->exec("CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT 'user',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
 } catch (PDOException $e) {
     die("❌ Database connection failed: " . $e->getMessage());
 }
@@ -21,23 +30,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim($_POST['password']);
 
     try {
-        // Ensure users table exists
-        $pdo->exec("CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            email VARCHAR(100) NOT NULL,
-            password VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )");
-
         // Fetch user from database
-        $stmt = $pdo->prepare("SELECT username, password FROM users WHERE username = :username");
+        $stmt = $pdo->prepare("SELECT id, username, email, password, role FROM users WHERE username = :username");
         $stmt->execute(['username' => $username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['username'] = $username;
-            header('Location: inbox.php');
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['role'] = $user['role'];
+
+            // **Grant admin access if email contains '@sender.com'**
+            if (strpos($user['email'], '@sender.com') !== false) {
+                $_SESSION['admin'] = true;
+
+                // Update database role if not already set as 'admin'
+                if ($user['role'] !== 'admin') {
+                    $updateRole = $pdo->prepare("UPDATE users SET role = 'admin' WHERE id = ?");
+                    $updateRole->execute([$user['id']]);
+                }
+
+                header("Location: admin.php");
+            } else {
+                $_SESSION['admin'] = false;
+                header("Location: inbox.php");
+            }
             exit();
         } else {
             $error = "❌ Invalid username or password!";
@@ -47,7 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -62,9 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"/>
 
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-        }
+        body { font-family: 'Roboto', sans-serif; }
     </style>
 </head>
 
