@@ -1,15 +1,13 @@
 <?php 
 session_start();
 
-// Ensure user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
 
-$username = $_SESSION['username']; // Logged-in user
+$username = $_SESSION['username']; 
 
-// PostgreSQL Database Credentials
 $host = "dpg-cvgd5atrie7s73bog17g-a"; 
 $dbname = "pager_sivs"; 
 $user = "pager_sivs_user";
@@ -22,10 +20,12 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Fetch all registered users except the logged-in user
+$pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
+    ->execute(['username' => $username]);
+
 $users = [];
 try {
-    $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
+    $stmt = $pdo->prepare("SELECT username, last_active FROM users WHERE username != :username");
     $stmt->execute(['username' => $username]);
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -45,7 +45,6 @@ try {
 <body class="bg-gray-100">
 
 <div class="flex h-screen">
-    <!-- Sidebar -->
     <div class="w-1/4 bg-white shadow-md p-4">
         <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> <a href="logout.php" class="text-red-500">Logout</a></h2>
         <h3 class="mt-4 font-semibold">Inbox</h3>
@@ -53,15 +52,18 @@ try {
 
         <h3 class="mt-4 font-semibold">All Users</h3>
         <ul id="userList" class="mt-2">
-            <?php foreach ($users as $user): ?>
+            <?php foreach ($users as $user): 
+                $lastActive = strtotime($user['last_active']);
+                $timeDiff = time() - $lastActive;
+                $status = ($timeDiff <= 60) ? "<span class='text-green-500'>● Online</span>" : "<span class='text-gray-500'>Last Seen " . round($timeDiff / 60) . " min ago</span>";
+            ?>
                 <li class="user-item p-2 cursor-pointer hover:bg-gray-200 rounded" data-username="<?= htmlspecialchars($user['username']) ?>">
-                    <?= htmlspecialchars($user['username']) ?>
+                    <?= htmlspecialchars($user['username']) ?> <?= $status ?>
                 </li>
             <?php endforeach; ?>
         </ul>
     </div>
 
-    <!-- Chat Window -->
     <div class="flex flex-col w-3/4 h-full bg-white shadow-md">
         <h3 id="chatWith" class="p-4 text-lg font-semibold bg-blue-500 text-white">Chat</h3>
         <div id="chatBody" class="flex flex-col flex-grow overflow-y-auto p-4 space-y-2 bg-gray-200"></div>
@@ -100,13 +102,15 @@ try {
                         isOwner ? 'bg-green-500 text-white ml-auto' : 'bg-blue-500 text-white mr-auto'
                     } m-2 shadow-md`;
 
-                    chatBubble.innerHTML = `<b>${msg.sender}:</b> ${msg.text} <i class="text-xs block opacity-75">${msg.timestamp}</i>`;
+                    chatBubble.innerHTML = `<b>${msg.sender}:</b> ${msg.text} <i class="text-xs block opacity-75">${msg.timestamp}</i>
+                    ${isOwner && msg.seen ? "<span class='text-gray-500 text-xs'>✔ Seen</span>" : ""}
+                    `;
 
                     chatBody.appendChild(chatBubble);
                 });
 
                 chatBody.scrollTop = chatBody.scrollHeight;
-                unreadMessages = 0; // Reset unread count when user views chat
+                unreadMessages = 0; 
                 updateTabTitle();
             } else {
                 alert('Error loading chat: ' + data.message);
@@ -142,11 +146,11 @@ try {
 
     async function checkNewMessages() {
         try {
-            const response = await fetch('check_messages.php'); // PHP script to count unread messages
+            const response = await fetch('check_messages.php'); 
             const data = await response.json();
 
             if (data.status === 'success') {
-                unreadMessages = data.unread; // Update unread count
+                unreadMessages = data.unread; 
                 updateTabTitle();
             }
         } catch (error) {
@@ -162,7 +166,12 @@ try {
         }
     }
 
-    setInterval(checkNewMessages, 1000); // Check new messages every second
+    setInterval(() => {
+        if (currentChatUser) loadChat(currentChatUser);
+        fetch("update_active.php");
+    }, 3000);
+
+    setInterval(checkNewMessages, 1000);
 </script>
 
 </body>
