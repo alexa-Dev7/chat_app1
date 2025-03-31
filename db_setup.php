@@ -3,7 +3,7 @@
 require 'db_connect.php';
 
 try {
-    // ✅ Create or update the Users table
+    // ✅ Ensure Users table exists
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -11,13 +11,15 @@ try {
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100) UNIQUE NOT NULL,
             role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+            last_active TIMESTAMP DEFAULT NOW(),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
 
-    // ✅ Ensure last_active column exists before adding
+    // ✅ Ensure last_active column exists before adding (for older databases)
     $columnExists = $pdo->query("
-        SELECT 1 FROM information_schema.columns 
+        SELECT column_name 
+        FROM information_schema.columns 
         WHERE table_name = 'users' AND column_name = 'last_active'
     ")->fetchColumn();
 
@@ -25,7 +27,7 @@ try {
         $pdo->exec("ALTER TABLE users ADD COLUMN last_active TIMESTAMP DEFAULT NOW();");
     }
 
-    // ✅ Create or update the Messages table
+    // ✅ Ensure Messages table exists
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS messages (
             id SERIAL PRIMARY KEY,
@@ -37,9 +39,10 @@ try {
         )
     ");
 
-    // ✅ Ensure read_status column exists before adding
+    // ✅ Ensure read_status column exists before adding (for older databases)
     $columnExists = $pdo->query("
-        SELECT 1 FROM information_schema.columns 
+        SELECT column_name 
+        FROM information_schema.columns 
         WHERE table_name = 'messages' AND column_name = 'read_status'
     ")->fetchColumn();
 
@@ -47,7 +50,7 @@ try {
         $pdo->exec("ALTER TABLE messages ADD COLUMN read_status BOOLEAN DEFAULT FALSE;");
     }
 
-    // ✅ Create or update the Sessions table
+    // ✅ Ensure Sessions table exists
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS sessions (
             id SERIAL PRIMARY KEY,
