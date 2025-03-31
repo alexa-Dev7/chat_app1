@@ -21,15 +21,15 @@ try {
     die("❌ Database connection failed: " . $e->getMessage());
 }
 
-// ✅ Ensure last_active column exists before updating
+// ✅ Update last_active timestamp
 try {
     $pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
         ->execute(['username' => $username]);
 } catch (PDOException $e) {
-    error_log("Error updating last_active: " . $e->getMessage()); // Logs error to avoid breaking the page
+    error_log("Error updating last_active: " . $e->getMessage());
 }
 
-// ✅ Fetch all users except the logged-in one
+// ✅ Fetch users except the logged-in one
 $users = [];
 try {
     $stmt = $pdo->prepare("SELECT username, last_active FROM users WHERE username != :username");
@@ -52,8 +52,11 @@ try {
 <body class="bg-gray-100">
 
 <div class="flex h-screen">
+    <!-- Sidebar: Users List -->
     <div class="w-1/4 bg-white shadow-md p-4">
-        <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> <a href="logout.php" class="text-red-500">Logout</a></h2>
+        <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> 
+            <a href="logout.php" class="text-red-500">Logout</a>
+        </h2>
         <h3 class="mt-4 font-semibold">Inbox</h3>
         <div id="inbox"></div>
 
@@ -71,6 +74,7 @@ try {
         </ul>
     </div>
 
+    <!-- Chat Window -->
     <div class="flex flex-col w-3/4 h-full bg-white shadow-md">
         <h3 id="chatWith" class="p-4 text-lg font-semibold bg-blue-500 text-white">Chat</h3>
         <div id="chatBody" class="flex flex-col flex-grow overflow-y-auto p-4 space-y-2 bg-gray-200"></div>
@@ -85,6 +89,7 @@ try {
     let currentChatUser = '';
     let unreadMessages = 0;
 
+    // Select User to Chat
     $(document).on('click', '.user-item', function() {
         currentChatUser = $(this).data('username');
         document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
@@ -93,6 +98,7 @@ try {
         markMessagesSeen(currentChatUser);
     });
 
+    // Load Chat Messages
     async function loadChat(chatKey) {
         try {
             const response = await fetch(`load_chat.php?chatKey=${encodeURIComponent(chatKey)}`);
@@ -128,6 +134,7 @@ try {
         }
     }
 
+    // Send Message
     async function sendMessage(event) {
         event.preventDefault();
         const messageInput = document.getElementById('messageInput');
@@ -152,6 +159,7 @@ try {
         }
     }
 
+    // Check for New Messages
     async function checkNewMessages() {
         try {
             const response = await fetch('chat_helper.php?action=check_unread');
@@ -166,6 +174,7 @@ try {
         }
     }
 
+    // Mark Messages as Seen
     async function markMessagesSeen(fromUser) {
         try {
             await fetch('chat_helper.php?action=mark_seen', {
@@ -178,6 +187,7 @@ try {
         }
     }
 
+    // Update Tab Title for Unread Messages
     function updateTabTitle() {
         if (unreadMessages > 0) {
             document.title = `🔴 (${unreadMessages}) New Messages - Sender`;
