@@ -14,22 +14,29 @@ $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 try {
-    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+    ]);
 } catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    die("❌ Database connection failed: " . $e->getMessage());
 }
 
-// Update last active status
-$pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
-    ->execute(['username' => $username]);
+// ✅ Ensure last_active column exists before updating
+try {
+    $pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
+        ->execute(['username' => $username]);
+} catch (PDOException $e) {
+    error_log("Error updating last_active: " . $e->getMessage()); // Logs error to avoid breaking the page
+}
 
+// ✅ Fetch all users except the logged-in one
 $users = [];
 try {
     $stmt = $pdo->prepare("SELECT username, last_active FROM users WHERE username != :username");
     $stmt->execute(['username' => $username]);
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    die("Error fetching users: " . $e->getMessage());
+    die("❌ Error fetching users: " . $e->getMessage());
 }
 ?>
 
@@ -46,10 +53,7 @@ try {
 
 <div class="flex h-screen">
     <div class="w-1/4 bg-white shadow-md p-4">
-        <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> 
-            <a href="logout.php" class="text-red-500">Logout</a>
-        </h2>
-
+        <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> <a href="logout.php" class="text-red-500">Logout</a></h2>
         <h3 class="mt-4 font-semibold">Inbox</h3>
         <div id="inbox"></div>
 
@@ -58,8 +62,7 @@ try {
             <?php foreach ($users as $user): 
                 $lastActive = strtotime($user['last_active']);
                 $timeDiff = time() - $lastActive;
-                $status = ($timeDiff <= 60) ? "<span class='text-green-500'>● Online</span>" 
-                                            : "<span class='text-gray-500'>Last Seen " . round($timeDiff / 60) . " min ago</span>";
+                $status = ($timeDiff <= 60) ? "<span class='text-green-500'>● Online</span>" : "<span class='text-gray-500'>Last Seen " . round($timeDiff / 60) . " min ago</span>";
             ?>
                 <li class="user-item p-2 cursor-pointer hover:bg-gray-200 rounded" data-username="<?= htmlspecialchars($user['username']) ?>">
                     <?= htmlspecialchars($user['username']) ?> <?= $status ?>
