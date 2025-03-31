@@ -1,4 +1,4 @@
-<?php 
+<?php
 session_start();
 
 if (!isset($_SESSION['username'])) {
@@ -8,10 +8,9 @@ if (!isset($_SESSION['username'])) {
 
 $username = $_SESSION['username']; 
 
-// ✅ Secure Database Connection
 require 'db_connect.php';
 
-// ✅ Update last_active timestamp when user is online
+// ✅ Update last_active timestamp
 try {
     $pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
         ->execute(['username' => $username]);
@@ -42,7 +41,6 @@ try {
 <body class="bg-gray-100">
 
 <div class="flex h-screen">
-    <!-- ✅ Sidebar: Users List -->
     <div class="w-1/4 bg-white shadow-md p-4">
         <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> <a href="logout.php" class="text-red-500">Logout</a></h2>
         <h3 class="mt-4 font-semibold">Inbox</h3>
@@ -62,7 +60,6 @@ try {
         </ul>
     </div>
 
-    <!-- ✅ Chat Box -->
     <div class="flex flex-col w-3/4 h-full bg-white shadow-md">
         <h3 id="chatWith" class="p-4 text-lg font-semibold bg-blue-500 text-white">Chat</h3>
         <div id="chatBody" class="flex flex-col flex-grow overflow-y-auto p-4 space-y-2 bg-gray-200"></div>
@@ -141,40 +138,6 @@ try {
             }
         } catch (error) {
             console.error('Error sending message:', error);
-        }
-    }
-
-    async function checkNewMessages() {
-        try {
-            const response = await fetch('chat_helper.php?action=check_unread');
-            const data = await response.json();
-
-            if (data.status === 'success') {
-                unreadMessages = data.unread;
-                updateTabTitle();
-            }
-        } catch (error) {
-            console.error('Error checking messages:', error);
-        }
-    }
-
-    async function markMessagesSeen(fromUser) {
-        try {
-            await fetch('chat_helper.php?action=mark_seen', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `from=${encodeURIComponent(fromUser)}`
-            });
-        } catch (error) {
-            console.error('Error marking messages as seen:', error);
-        }
-    }
-
-    function updateTabTitle() {
-        if (unreadMessages > 0) {
-            document.title = `🔴 (${unreadMessages}) New Messages - Sender`;
-        } else {
-            document.title = `Inbox | Messenger`;
         }
     }
 
