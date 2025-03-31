@@ -19,6 +19,7 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
+// Update last active status
 $pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
     ->execute(['username' => $username]);
 
@@ -45,7 +46,10 @@ try {
 
 <div class="flex h-screen">
     <div class="w-1/4 bg-white shadow-md p-4">
-        <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> <a href="logout.php" class="text-red-500">Logout</a></h2>
+        <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> 
+            <a href="logout.php" class="text-red-500">Logout</a>
+        </h2>
+
         <h3 class="mt-4 font-semibold">Inbox</h3>
         <div id="inbox"></div>
 
@@ -54,7 +58,8 @@ try {
             <?php foreach ($users as $user): 
                 $lastActive = strtotime($user['last_active']);
                 $timeDiff = time() - $lastActive;
-                $status = ($timeDiff <= 60) ? "<span class='text-green-500'>● Online</span>" : "<span class='text-gray-500'>Last Seen " . round($timeDiff / 60) . " min ago</span>";
+                $status = ($timeDiff <= 60) ? "<span class='text-green-500'>● Online</span>" 
+                                            : "<span class='text-gray-500'>Last Seen " . round($timeDiff / 60) . " min ago</span>";
             ?>
                 <li class="user-item p-2 cursor-pointer hover:bg-gray-200 rounded" data-username="<?= htmlspecialchars($user['username']) ?>">
                     <?= htmlspecialchars($user['username']) ?> <?= $status ?>
