@@ -1,5 +1,5 @@
 <?php
-// Include DB connection
+// Include database connection
 require 'db_connect.php';
 
 try {
@@ -15,12 +15,12 @@ try {
         )
     ");
 
-    // Check if 'last_active' exists before adding it
+    // ✅ Ensure last_active column exists before adding
     $columnExists = $pdo->query("
         SELECT column_name 
         FROM information_schema.columns 
         WHERE table_name = 'users' AND column_name = 'last_active'
-    ")->fetch();
+    ")->fetchColumn();
 
     if (!$columnExists) {
         $pdo->exec("ALTER TABLE users ADD COLUMN last_active TIMESTAMP DEFAULT NOW();");
@@ -38,12 +38,12 @@ try {
         )
     ");
 
-    // Check if 'read_status' exists before adding it
+    // ✅ Ensure read_status column exists before adding
     $columnExists = $pdo->query("
         SELECT column_name 
         FROM information_schema.columns 
         WHERE table_name = 'messages' AND column_name = 'read_status'
-    ")->fetch();
+    ")->fetchColumn();
 
     if (!$columnExists) {
         $pdo->exec("ALTER TABLE messages ADD COLUMN read_status BOOLEAN DEFAULT FALSE;");
@@ -53,11 +53,10 @@ try {
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS sessions (
             id SERIAL PRIMARY KEY,
-            user_id INT NOT NULL,
+            user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             session_token VARCHAR(255) UNIQUE NOT NULL,
             expires_at TIMESTAMP NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
 
