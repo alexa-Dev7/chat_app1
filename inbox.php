@@ -148,6 +148,13 @@ try {
     setInterval(() => {
         if (currentChatUser) loadChat(currentChatUser);
     }, 3000);
+
+    setInterval(() => {
+    fetch('/keep-alive.php')
+        .then(response => console.log('✅ Server is awake'))
+        .catch(error => console.error('❌ Error keeping server awake:', error));
+}, 600000); // Sends a request every 10 minutes (600,000 ms)
+
 </script>
 
 </body>
