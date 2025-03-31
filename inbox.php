@@ -1,31 +1,44 @@
-<?php
+
+<?php 
 session_start();
 
+// Ensure user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit();
 }
 
-$username = $_SESSION['username']; 
+$username = $_SESSION['username']; // Logged-in user
 
-require 'db_connect.php';
+// PostgreSQL Database Credentials
+$host = "dpg-cvgd5atrie7s73bog17g-a"; 
+$dbname = "pager_sivs"; 
+$user = "pager_sivs_user";
+$password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
-// ✅ Update last_active timestamp
 try {
-    $pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
-        ->execute(['username' => $username]);
+    $dsn = "pgsql:host=$host;dbname=$dbname";
+    $pdo = new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 } catch (PDOException $e) {
-    error_log("Error updating last_active: " . $e->getMessage());
+    die("Database connection failed: " . $e->getMessage());
 }
 
-// ✅ Fetch all users except the logged-in one
+// Verify if the 'messages' table exists before fetching chat
+$stmt = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+$tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+if (!in_array('messages', $tables)) {
+    die("❌ Chat error: Messages table does not exist or database connection failed.");
+}
+
+// Fetch all registered users except the logged-in user
 $users = [];
 try {
-    $stmt = $pdo->prepare("SELECT username, last_active FROM users WHERE username != :username");
+    $stmt = $pdo->prepare("SELECT username FROM users WHERE username != :username");
     $stmt->execute(['username' => $username]);
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    die("❌ Error fetching users: " . $e->getMessage());
+    die("Error fetching users: " . $e->getMessage());
 }
 ?>
 
@@ -41,6 +54,7 @@ try {
 <body class="bg-gray-100">
 
 <div class="flex h-screen">
+    <!-- Sidebar -->
     <div class="w-1/4 bg-white shadow-md p-4">
         <h2 class="text-lg font-bold">👤 <?= htmlspecialchars($username) ?> <a href="logout.php" class="text-red-500">Logout</a></h2>
         <h3 class="mt-4 font-semibold">Inbox</h3>
@@ -48,18 +62,15 @@ try {
 
         <h3 class="mt-4 font-semibold">All Users</h3>
         <ul id="userList" class="mt-2">
-            <?php foreach ($users as $user): 
-                $lastActive = strtotime($user['last_active']);
-                $timeDiff = time() - $lastActive;
-                $status = ($timeDiff <= 60) ? "<span class='text-green-500'>● Online</span>" : "<span class='text-gray-500'>Last Seen " . round($timeDiff / 60) . " min ago</span>";
-            ?>
+            <?php foreach ($users as $user): ?>
                 <li class="user-item p-2 cursor-pointer hover:bg-gray-200 rounded" data-username="<?= htmlspecialchars($user['username']) ?>">
-                    <?= htmlspecialchars($user['username']) ?> <?= $status ?>
+                    <?= htmlspecialchars($user['username']) ?>
                 </li>
             <?php endforeach; ?>
         </ul>
     </div>
 
+    <!-- Chat Window -->
     <div class="flex flex-col w-3/4 h-full bg-white shadow-md">
         <h3 id="chatWith" class="p-4 text-lg font-semibold bg-blue-500 text-white">Chat</h3>
         <div id="chatBody" class="flex flex-col flex-grow overflow-y-auto p-4 space-y-2 bg-gray-200"></div>
@@ -72,14 +83,12 @@ try {
 
 <script>
     let currentChatUser = '';
-    let unreadMessages = 0;
 
     $(document).on('click', '.user-item', function() {
         currentChatUser = $(this).data('username');
         document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
         document.getElementById('chatBody').innerHTML = ''; 
         loadChat(currentChatUser);
-        markMessagesSeen(currentChatUser);
     });
 
     async function loadChat(chatKey) {
@@ -99,16 +108,12 @@ try {
                         isOwner ? 'bg-green-500 text-white ml-auto' : 'bg-blue-500 text-white mr-auto'
                     } m-2 shadow-md`;
 
-                    chatBubble.innerHTML = `<b>${msg.sender}:</b> ${msg.text} <i class="text-xs block opacity-75">${msg.timestamp}</i>
-                    ${isOwner && msg.seen ? "<span class='text-gray-500 text-xs'>✔ Seen</span>" : ""}
-                    `;
+                    chatBubble.innerHTML = `<b>${msg.sender}:</b> ${msg.text} <i class="text-xs block opacity-75">${msg.timestamp}</i>`;
 
                     chatBody.appendChild(chatBubble);
                 });
 
                 chatBody.scrollTop = chatBody.scrollHeight;
-                unreadMessages = 0;
-                updateTabTitle();
             } else {
                 alert('Error loading chat: ' + data.message);
             }
@@ -143,11 +148,9 @@ try {
 
     setInterval(() => {
         if (currentChatUser) loadChat(currentChatUser);
-        fetch("chat_helper.php?action=update_active");
     }, 3000);
-
-    setInterval(checkNewMessages, 1000);
 </script>
 
 </body>
 </html>
+
