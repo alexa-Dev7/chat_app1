@@ -14,14 +14,14 @@ $user = "pager_sivs_user";
 $password = "L2iAd4DVlM30bVErrE8UVTelFpcP9uf8";
 
 try {
-    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = new PDO("pgsql:host=$host;dbname=$dbname", $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Fetch users with active status
+$pdo->prepare("UPDATE users SET last_active = NOW() WHERE username = :username")
+    ->execute(['username' => $username]);
+
 $users = [];
 try {
     $stmt = $pdo->prepare("SELECT username, last_active FROM users WHERE username != :username");
@@ -82,7 +82,7 @@ try {
         document.getElementById('chatWith').innerText = `Chat with ${currentChatUser}`;
         document.getElementById('chatBody').innerHTML = ''; 
         loadChat(currentChatUser);
-        markMessagesAsSeen(currentChatUser);
+        markMessagesSeen(currentChatUser);
     });
 
     async function loadChat(chatKey) {
@@ -110,7 +110,7 @@ try {
                 });
 
                 chatBody.scrollTop = chatBody.scrollHeight;
-                unreadMessages = 0; 
+                unreadMessages = 0;
                 updateTabTitle();
             } else {
                 alert('Error loading chat: ' + data.message);
@@ -148,6 +148,7 @@ try {
         try {
             const response = await fetch('chat_helper.php?action=check_unread');
             const data = await response.json();
+
             if (data.status === 'success') {
                 unreadMessages = data.unread;
                 updateTabTitle();
@@ -157,16 +158,24 @@ try {
         }
     }
 
-    async function markMessagesAsSeen(fromUser) {
-        await fetch("chat_helper.php?action=mark_seen", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: `from=${encodeURIComponent(fromUser)}`
-        });
+    async function markMessagesSeen(fromUser) {
+        try {
+            await fetch('chat_helper.php?action=mark_seen', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `from=${encodeURIComponent(fromUser)}`
+            });
+        } catch (error) {
+            console.error('Error marking messages as seen:', error);
+        }
     }
 
     function updateTabTitle() {
-        document.title = unreadMessages > 0 ? `🔴 (${unreadMessages}) New Messages` : "Inbox | Messenger";
+        if (unreadMessages > 0) {
+            document.title = `🔴 (${unreadMessages}) New Messages - Sender`;
+        } else {
+            document.title = `Inbox | Messenger`;
+        }
     }
 
     setInterval(() => {
